@@ -1,9 +1,3 @@
----
-title: Triton Inference Server on Kubernetes Hands on Lab
-tags: NVIDIA, Kubernetes, Triton, DeepOps
-description: 
----
-
 # Preparation
 
 You will need to prepare at least 3 nodes, one master node, one compute node with 2 GPUs or above and one provision node.
