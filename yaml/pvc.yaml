@@ -1,0 +1,14 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: triton-claim
+  annotations:
+    volume.beta.kubernetes.io/storage-provisioner: "cluster.local/nfs-client-provisioner"
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+      # Storage size could be modified
+

@@ -1,0 +1,25 @@
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta2
+metadata:
+  name: triton-metirc-app-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nvidia-tritoninferenceserver ## Check by describe deployment
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+  - type: Object
+    object:
+      metric:
+        name: avg_time_queue_ms
+      describedObject:
+        apiVersion: /v1
+        kind: Namespace
+        name: default
+      target:
+        type: Value
+        value: 1500m ## 1500m is 1ms
+
