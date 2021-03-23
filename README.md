@@ -260,6 +260,10 @@ $ helm delete nvidia
 Make sure the pod is running, it may take a few mins to download the image
 ```
 $ kubectl get pod -o wide
+NAME                                            READY   STATUS    RESTARTS   AGE   IP             NODE          NOMINATED NODE   READINESS GATES
+ingress-nginx-controller-6b4fdfdcf7-2t4p6       1/1     Running   0          44m   10.19.104.20   master-node   <none>           <none>
+nvidia-tritoninferenceserver-686bc4c4bc-vjrvl   1/1     Running   0          92m   10.233.91.18   gpu-node1     <none>           <none>
+
 ```
 
 Check pod status
@@ -318,6 +322,7 @@ Here are some examples to simulate light loading and heavy loading, let's run â€
 $ git clone https://github.com/YH-Wu/Triton-Inference-Server-on-Kubernetes.git
 $ chmod +x Triton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
 $ chmod +x Triton-Inference-Server-on-Kubernetes/scripts/stress_heavy.sh
+
 # Modified URL
 $ vi riton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
 
