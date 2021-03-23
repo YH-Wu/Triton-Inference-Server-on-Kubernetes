@@ -3,7 +3,7 @@ affinity: {}
 
 image:
   repository: directxman12/k8s-prometheus-adapter-amd64
-  tag: v0.8.3
+  tag: v0.8.2
   pullPolicy: IfNotPresent
 
 logLevel: 4
@@ -19,8 +19,8 @@ priorityClassName: ""
 # Url to access prometheus
 prometheus:
   # Value is templated
-  url: http://prometheus.default.svc
-  port: 9090
+  url: http://<kube-master>
+  port: 30500
   path: ""
 
 replicas: 1
@@ -39,17 +39,7 @@ serviceAccount:
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name:
-# Custom DNS configuration to be added to prometheus-adapter pods
-dnsConfig: {}
-# nameservers:
-#   - 1.2.3.4
-# searches:
-#   - ns1.svc.cluster-domain.example
-#   - my.dns.search.suffix
-# options:
-#   - name: ndots
-#     value: "2"
-#   - name: edns0
+
 resources: {}
   # requests:
   #   cpu: 100m
@@ -59,8 +49,8 @@ resources: {}
   #   memory: 128Mi
 
 rules:
+#  default: true
   custom:
-  #Custom Trion metric for trigger Kubernetes HPA
   - seriesQuery: 'nv_inference_queue_duration_us{namespace="default"}'
     resources:
       overrides:
@@ -70,6 +60,43 @@ rules:
       matches: "nv_inference_queue_duration_us"
       as: "avg_time_queue_ms"
     metricsQuery: "avg(delta(nv_inference_queue_duration_us{<<.LabelMatchers>>}[1m])/(1+delta(nv_inference_request_success{<<.LabelMatchers>>}[1m]))/1000) by (<<.GroupBy>>)"
+  # Mounts a configMap with pre-generated rules for use. Overrides the
+  # default, custom, external and resource entries
+#  existing:
+#  external: []
+# - seriesQuery: '{__name__=~"^some_metric_count$"}'
+#   resources:
+#     template: <<.Resource>>
+#   name:
+#     matches: ""
+#     as: "my_external_metric"
+#   metricsQuery: sum(<<.Series>>{<<.LabelMatchers>>}) by (<<.GroupBy>>)
+#  resource: {}
+#   cpu:
+#     containerQuery: sum(rate(container_cpu_usage_seconds_total{<<.LabelMatchers>>}[3m])) by (<<.GroupBy>>)
+#     nodeQuery: sum(rate(container_cpu_usage_seconds_total{<<.LabelMatchers>>, id='/'}[3m])) by (<<.GroupBy>>)
+#     resources:
+#       overrides:
+#         instance:
+#           resource: node
+#         namespace:
+#           resource: namespace
+#         pod:
+#           resource: pod
+#     containerLabel: container
+#   memory:
+#     containerQuery: sum(container_memory_working_set_bytes{<<.LabelMatchers>>}) by (<<.GroupBy>>)
+#     nodeQuery: sum(container_memory_working_set_bytes{<<.LabelMatchers>>,id='/'}) by (<<.GroupBy>>)
+#     resources:
+#       overrides:
+#         instance:
+#           resource: node
+#         namespace:
+#           resource: namespace
+#         pod:
+#           resource: pod
+#     containerLabel: container
+#   window: 3m
 
 service:
   annotations: {}
@@ -134,9 +161,4 @@ podDisruptionBudget:
   enabled: false
   minAvailable:
   maxUnavailable: 1
-
-certManager:
-  enabled: false
-  caCertDuration: 43800h
-  certDuration: 8760h
 

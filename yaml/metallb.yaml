@@ -2,10 +2,11 @@ configInline:
   address-pools:
   - name: default
     protocol: layer2
+
+    #IP segment should be same as management segment
     addresses:
-    - <IP_RANGE_START>-<IP_RANGE_END> 
-      # 10.19.104.10-10.19.104.10
-      #IP segment should be same as management segment
+    - <IP_RANGE>-<IP_RANGE> 
+
 controller:
   nodeSelector:
     node-role.kubernetes.io/master: ""

@@ -77,7 +77,7 @@ spec:
             periodSeconds: 5
             httpGet:
               path: /v2/health/ready
-              port: httip
+              port: http
           volumeMounts:
             - name: pv-storage
               mountPath: /mnt
