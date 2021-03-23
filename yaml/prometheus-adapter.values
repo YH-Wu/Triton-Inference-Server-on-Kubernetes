@@ -19,7 +19,7 @@ priorityClassName: ""
 # Url to access prometheus
 prometheus:
   # Value is templated
-  url: http://<kube-master>
+  url: http://10.19.104.20
   port: 30500
   path: ""
 
