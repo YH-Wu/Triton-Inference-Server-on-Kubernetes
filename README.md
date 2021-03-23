@@ -14,8 +14,7 @@ You will need to prepare at least 3 nodes, one master node, one compute node wit
 
 ## Download DeepOps in Provision Node
 
-We are going to use DeepOps to deploy kubernetes and related packages.
-
+We are going to use DeepOps to deploy kubernetes and related packages
 ```
 $ git clone https://github.com/NVIDIA/deepops.git
 $ cd deepops
@@ -24,8 +23,7 @@ $ git checkout release-21.03
 
 ## Setup for Provision Node
 
-This will install Ansible and other software on the provisioning machine which will be used to deploy all other software to the cluster. For more information on Ansible and why we use it, consult the Ansible Guide.
-
+This will install Ansible and other software on the provisioning machine which will be used to deploy all other software to the cluster. For more information on Ansible and why we use it, consult the Ansible Guide
 ```
 $ scripts/setup.sh
 ```
@@ -33,15 +31,41 @@ $ scripts/setup.sh
 ## DeepOps Configuration
 
 Ansible uses an inventory which outlines the servers in your cluster. The setup script from the previous step will copy an example inventory configuration to the config directory.
-Edit the inventory:Edit inventory, fill in all nodes information in [ALL] section, master nodes in [kube-master] and [etcd] section, compute nodes in [kube-node] section.
 
+Edit the inventory:
 ```
 $ vi config/inventory
 ```
+Edit inventory, fill in all nodes information in [ALL] section, master nodes in [kube-master] and [etcd] section, compute nodes in [kube-node] section
+```
+######
+# ALL NODES
+# NOTE: Use existing hostnames here, DeepOps will configure server hostnames to match these values
+######
+[all]
+master-node    ansible_host=10.19.104.20
+gpu-node1      ansible_host=10.19.104.21
 
-[TODO]Screenshoot here
+######
+# KUBERNETES
+######
+[kube-master]
+master-node
 
-Verify the configuration, provision node should be able to reach each node by Ansible.
+# Odd number of nodes required
+[etcd]
+master-node
+
+# Also add mgmt/master nodes here if they will run non-control plane jobs
+[kube-node]
+gpu-node1
+
+[k8s-cluster:children]
+kube-master
+kube-node
+```
+
+Verify the configuration, provision node should be able to reach each node by Ansible
 
 ```
 $ ansible all -m raw -a "hostname" -k -K -u <USERNAME> 
@@ -61,60 +85,129 @@ To use an existing nfs server server update the k8s_nfs_server and k8s_nfs_expor
 
 Additionally, the k8s_nfs_mkdir variable can be set to false if the export directory is already configured on the server. In this lab, we will use an existing NFS server server, therefore we will modify following:
 
-[TODO]Screenshoot here
+```
+# NFS Client Provisioner
+# Playbook: nfs-client-provisioner.yml
+k8s_nfs_client_provisioner: true
 
-Install Kubernetes using Ansible and Kubespray.
+# Set to true if you want to create a NFS server in master node already
+k8s_deploy_nfs_server: false
+
+# Set to false if an export dir is already
+k8s_nfs_mkdir: true  configured with proper permissions
+
+# Fill your NFS Server IP and export path
+k8s_nfs_server: '10.19.104.15'
+k8s_nfs_export_path: '/nfsshare/k8s_nfs'
+```
+
+Install Kubernetes using Ansible and Kubespray
 ```
 $ ansible-playbook -l k8s-cluster playbooks/k8s-cluster.yml -k -K -u <USERNAME> 
 ```
 
-Verify that the Kubernetes cluster is running, you should be able to see ALL pods are at Running status and all nodes are in Ready status. It may take a few minutes to download and initialize pods.
+Verify that the Kubernetes cluster is running, you should be able to see ALL pods are at Running status and all nodes are in Ready status. It may take a few minutes to download and initialize pods
 
 Check nodes status:
 ```
 $ kubectl get nodes
+NAME          STATUS   ROLES    AGE    VERSION
+gpu-node1     Ready    <none>   104m   v1.18.9
+master-node   Ready    master   105m   v1.18.9
 ```
-[TODO]Screenshoot here
 
 Check pods status:
 ```
 $ kubectl get pods -A
+NAMESPACE                        NAME                                          READY   STATUS    RESTARTS   AGE
+deepops-nfs-client-provisioner   nfs-client-provisioner-9d67488d8-7cz54        1/1     Running   0          102m
+kube-system                      calico-kube-controllers-56f65f7cbd-h7xz9      1/1     Running   0          105m
+kube-system                      calico-node-4dzmg                             1/1     Running   1          106m
+kube-system                      calico-node-cflcj                             1/1     Running   2          106m
+kube-system                      coredns-dff8fc7d-5bn7t                        1/1     Running   1          105m
+kube-system                      coredns-dff8fc7d-9tchk                        1/1     Running   0          105m
+kube-system                      dns-autoscaler-66498f5c5f-q48wp               1/1     Running   0          105m
+kube-system                      kube-apiserver-master-node                    1/1     Running   0          107m
+kube-system                      kube-controller-manager-master-node           1/1     Running   0          107m
+kube-system                      kube-proxy-2jc2s                              1/1     Running   1          106m
+kube-system                      kube-proxy-r6944                              1/1     Running   0          107m
+kube-system                      kube-scheduler-master-node                    1/1     Running   0          107m
+kube-system                      kubernetes-dashboard-c8c99b87c-rsm7c          1/1     Running   1          105m
+kube-system                      kubernetes-metrics-scraper-5c78444f64-gksm4   1/1     Running   1          105m
+kube-system                      nginx-proxy-gpu-node1                         1/1     Running   1          106m
+kube-system                      nodelocaldns-q58cj                            1/1     Running   0          105m
+kube-system                      nodelocaldns-tbcqr                            1/1     Running   2          105m
+kube-system                      nvidia-device-plugin-ccqn8                    1/1     Running   0          102m
+node-feature-discovery           gpu-feature-discovery-tns48                   1/1     Running   0          103m
+node-feature-discovery           nfd-master-bc8c476d9-z82ct                    1/1     Running   0          103m
+node-feature-discovery           nfd-worker-q8646                              1/1     Running   0          103m
+node-feature-discovery           nfd-worker-s2w7j                              1/1     Running   0          102m
 ```
-[TODO]Screenshoot here
 
-Optionally, test a GPU job to ensure that your Kubernetes setup can tap into GPUs.
+
+Optionally, test a GPU job to ensure that your Kubernetes setup can tap into GPUs
 ```
 $ kubectl run nvidia-smi --rm -t -i --restart=Never --image=nvidia/cuda:10.0-runtime-ubi7 --limits=nvidia.com/gpu=1 -- nvidia-smi
+Tue Mar 23 07:09:46 2021
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 450.102.04   Driver Version: 450.102.04   CUDA Version: 11.0     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  Quadro RTX 8000     On   | 00000000:0B:00.0 Off |                  Off |
+| 33%   30C    P8    10W / 260W |      1MiB / 48601MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+pod "nvidia-smi" deleted
 ```
-[TODO]Screenshoot here
+
 # Kubernetes Configuration 
 ## Create PVC
-Create a Persistent Volumes Claims for Triton Inference Server use.
+Create a Persistent Volumes Claims for Triton Inference Server use. Storage size could be modified in yaml file
 ```
-$ vi ~/pvc.yaml
-$ kubectl apply -f ~/pvc.yaml
+$ git clone https://github.com/YH-Wu/Triton-Inference-Server-on-Kubernetes.git
+$ cd Triton-Inference-Server-on-Kubernetes/
+$ kubectl apply -f yaml/pvc.yaml
 ```
 Validating PVC has successfully been created.
 ```
 $ kubectl get pvc -A
+NAMESPACE   NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+default     triton-claim   Bound    pvc-81bed9b6-ccee-4a57-a1a0-1fb26890ed22   10Gi       RWX            nfs-client     5s
 ```
 RemovePVC (Optional, for debugging)
 ```
-$ kubectl delete pvc <PVC_NAME>
+$ kubectl delete pvc <PVC_NAME> -n <NAMESPACE>
 ```
 ## Create Kubernetes Secrets
-Create a Kubernetes Secrets so that kubernetes is able to pull docker images from NGC
-https://ngc.nvidia.com/setup/api-key
+Create a Kubernetes Secrets so that kubernetes will be able to pull docker images from [NVIDIA GPU Cloud](https://ngc.nvidia.com/setup/api-key)
+
 ```
 $ kubectl create secret docker-registry ngc \
   --docker-server=nvcr.io \
   --docker-username='$oauthtoken' \
-  --docker-password=<your-api-key> \
+  --docker-password=<YOUR_API_KEY> \
   --docker-email=<YOUR_NGC_ACCOUNT>
 ```
-Validating kubernetes secret for NGC access  has successfully been created.
+Validating kubernetes secret for NGC access  has successfully been created
 ```
 $ kubectl get secrets
+NAME                                          TYPE                                  DATA   AGE
+default-token-rmdlj                           kubernetes.io/service-account-token   3      117m
+ngc                                           kubernetes.io/dockerconfigjson        1      7s
+sh.helm.release.v1.gpu-feature-discovery.v1   helm.sh/release.v1                    1      113m
+sh.helm.release.v1.nvidia-device-plugin.v1    helm.sh/release.v1                    1      113m
+
 ```
 Remove Kubernetes Secret (Optional, for debugging)
 ```
@@ -126,13 +219,13 @@ Kubernetes provides a variety of mechanisms to expose pods in your cluster to ex
 Load Balancers, which expose an external IP and route traffic to one or more pods inside the cluster. 
 
 Ingress controllers, which provide a mapping between external HTTP routes and internal services. Ingress controllers are typically exposed using a Load Balancer external IP.
-DeepOps provides scripts you can run to configure a simple Load Balancer and/or Ingress setup:
+DeepOps provides scripts you can run to configure a simple Load Balancer and/or Ingress setup.
 
-Set available IPs for load balancer, see metallb.yml content, This script will set up a software-based L2 Load Balancer using MetalLb.
+Set available IPs for load balance:
 ```
-$ cd ~/deepops
-$ vi config/helm/metallb.yml
-$ ./scripts/k8s/deploy_loadbalancer.sh
+$ vi yaml/metallb.yml
+$ cp yaml/metallb.yaml ~/deepops/config/helm/metallb.yml
+$ . ~/deepops/scripts/k8s/deploy_loadbalancer.sh
 ```
 Remove metallb load balancer (Optional, for debugging)
 ```
@@ -142,44 +235,20 @@ $ helm delete metallb -n deepops-loadbalancer
 
 # Triton Inference Server Configuration
 ## Prepare a Local Model Repository
-Get Triton Inference Server sample from GitHub into home directory
-```
-$ cd
-$ git clone https://github.com/triton-inference-server/server.git
-```
 
-Download model sample to NFS storage
+Download model sample and upload to NFS storage
 ```
+$ git clone https://github.com/YH-Wu/server.git
 $ cd server/docs/examples
 $ ./fetch_models.sh
-$ scp -r model_repository/ <USERNAME>@<NFS_SERVER_IP>:<NFS_PVC_LOCATION>
+$ scp -r model_repository/ <USERNAME>@<NFS_SERVER_IP>:<NFS_TRITION_CLAIM_PVC_LOCATION>/
 ```
 ## Deploy Triton Inference Server by Helm Chart
-Download Triton Inference Server Helm Chart from NGC
-```
-$ cd
-$ helm fetch https://helm.ngc.nvidia.com/nvidia/charts/tritoninferenceserver-1.0.0.tgz
-```
-
-Unzip it for modify content
-```
-$ tar zxvf tritoninferenceserver-1.0.0.tgz
-$ cd tritoninferenceserver
-```
-
-Modify docker image name and model repository path, because the helm chart are not up to date, see value.yaml for full content
-```
-$ vi values.yaml
-```
-
-Change cmd,args and the path of liveness/readiness probe,also need to add volume mount and kubernetes secrets because the helm chart are not up to date, see deployment.yaml for full content
-```
-$ vi templates/deployment.yaml
-```
 
 Deploy Triton Inference Server
 ```
-$ helm install nvidia .
+$ cd ~/Triton-Inference-Server-on-Kubernetes
+$ helm install nvidia tritoninferenceserver
 ```
 
 Remove Triton Inference Server (Optional, for debugging)
@@ -188,20 +257,23 @@ $ helm list #Check helm name
 $ helm delete nvidia
 ```
 ## Verify Trion Inference Server Status
-Make sure the pod is running, it may take a few mins to download the image.
+Make sure the pod is running, it may take a few mins to download the image
 ```
-$ kubectl get pod -A -o wide
+$ kubectl get pod -o wide
 ```
 
-Check pod status.
+Check pod status
 ```
 $ kubectl describe pod <TRITON_POD_NAME>
 $ kubectl logs <TRITON_POD_NAME>
 ```
 
-If the load balancer is set correctly, the Triton deployment should get an external IP.
+If the load balancer is set correctly, the Triton deployment should get an external IP
 ```
 $ kubectl get service
+NAME                           TYPE           CLUSTER-IP      EXTERNAL-IP    PORT(S)                                        AGE
+kubernetes                     ClusterIP      10.233.0.1      <none>         443/TCP                                        3h10m
+nvidia-tritoninferenceserver   LoadBalancer   10.233.42.105   10.19.104.10   8000:32197/TCP,8001:31639/TCP,8002:32131/TCP   62s
 ```
 
 
@@ -217,16 +289,21 @@ $ curl <TRITON_EXTERNAL_IP>:8002/metrics
 ```
 
 ## Run Triton Client Examples
-Download Triton Inference Client Examples from NGC. In this lab, we run this in compute node in order to get stable throughput and reduce network bandwidth and latency impact.
+Download Triton Inference Client Examples from NGC. In this lab, we **run this in compute node** in order to get stable throughput and reduce network bandwidth and latency impact.
 
-To stabilize GPU compute performance, lock GPU clock rate by following command
+To stabilize GPU compute performance, lock GPU clock rate at Default Applications Clocks by following command:
 ```
-$ sudo nvidia-smi -lgc 1327,1327
+#To get Applications Clocks by nvidia-smi -q
+$ sudo nvidia-smi -lgc 1327,1327 # For NVIDIA Tesla V100
+$ sudo nvidia-smi -lgc 1395,1395 # For NVIDIA Quadro RTX 8000
 ```
-
+**NOTE: Lock GPU Clock rate is NOT require for production environment.**
+<br>
+<br>
+<br>
 Launch Triton Client Example container
 ```
-$ docker run -it --rm --net=host nvcr.io/nvidia/tritonserver:20.09-py3-clientsdk
+$ sudo docker run -it --rm --net=host nvcr.io/nvidia/tritonserver:20.09-py3-clientsdk
 ```
 
 Send inference request to Triton Inference Server.
@@ -234,21 +311,38 @@ Send inference request to Triton Inference Server.
 $ /workspace/install/bin/image_client -m inception_graphdef -c 1 -s INCEPTION /workspace/images/mug.jpg -u <TRITON_EXTERNAL_IP>:8000 -b 128
 ```
 
-To learn the latest usage of client sample, please visit Triton Inference Server GitHub page 
+To learn the latest usage of client sample, please visit [Triton Inference Server](https://github.com/triton-inference-server/server). 
 
-Here are some examples to simulate light loading and heavy loading, see stress_light.sh and stress_heavy.sh
-
-Let's run “stress_light.sh” and monitor its status by Grafana dashboard. Practice following to create a monitoring service for Triton Inference Server.
+Here are some examples to simulate light loading and heavy loading, let's run “stress_light.sh” and monitor its status by Grafana dashboard. Practice following to create a monitoring service for Triton Inference Server.
 ```
-$ chmod +x stress_light.sh
-$ ./stress_light.sh
+$ git clone https://github.com/YH-Wu/Triton-Inference-Server-on-Kubernetes.git
+$ chmod +x Triton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
+$ chmod +x Triton-Inference-Server-on-Kubernetes/scripts/stress_heavy.sh
+# Modified URL
+$ vi riton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
+
+$ ./Triton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
 ```
 
 ## Deploy monitor service 
-Let's go back to provision node, deploy Prometheus and Grafana to monitor Kubernetes and cluster nodes.
+Let's **go back to provision node**, deploy Prometheus and Grafana to monitor Kubernetes and cluster nodes.
 ```
 $ cd ~/deepops/scripts/k8s
 $ ./deploy_monitoring.sh
+```
+
+Check monitoring service status
+```
+$ kubectl get pod -n monitoring
+NAME                                                        READY   STATUS    RESTARTS   AGE
+alertmanager-kube-prometheus-stack-alertmanager-0           2/2     Running   0          2m44s
+dcgm-exporter-jmjqv                                         1/1     Running   0          2m49s
+kube-prometheus-stack-grafana-7f97fc5446-zpltf              2/2     Running   0          2m55s
+kube-prometheus-stack-kube-state-metrics-66789f8885-8c6tw   1/1     Running   0          2m55s
+kube-prometheus-stack-operator-647c466c47-6jdn8             2/2     Running   0          2m55s
+kube-prometheus-stack-prometheus-node-exporter-clxz8        1/1     Running   0          2m55s
+kube-prometheus-stack-prometheus-node-exporter-tlvfg        1/1     Running   0          2m55s
+prometheus-kube-prometheus-stack-prometheus-0               3/3     Running   1          2m44s
 ```
 
 The services can be reached from the following addresses:
@@ -260,18 +354,19 @@ Alertmanager: http://\<kube-master>:30400<br>
 
 You should be able to observe metrics such as GPU Utilization, memory usage in GPU nodes dashboard but there are no Triton-related metrics for monitoring. Therefore, let’s add Triton-related metrics into Prometheus server in the following sections.
 
+\<TODO>SCREENSHOT
+
 # Monitor Triton Inference Server
 ## Add Triton Metrics into Prometheus server
 
 Delete the current monitoring service because we will modify it.
 ```
-$ cd ~/deepops/scripts/k8s
 $ ./deploy_monitoring.sh -d
 ```
 
 Add Triton Inference Server Metrics, we will need to modify deepops/config/helm/monitoring.yml, see full content of monitoring.yml
 ```
-$ vi ~/deepops/config/helm/monitoring.yml
+$ cp ~/Triton-Inference-Server-on-Kubernetes/yaml/monitoring.yaml ~/deepops/config/helm/monitoring.yml 
 ```
 
 After adding Triton Metrics, re-deploy monitoring service again
@@ -289,39 +384,43 @@ Alertmanager: http://\<kube-master>:30400<br>
 Go to Prometheus server and simply search “inference”, you should be able to see Triton-related metrics.
 
 ## Create monitor dashboard for Triton Inference Server
-Create a dashboard and add new panels by following:
+Go to Grafana, create a dashboard and add new panels by following:
 1. Success request per sec
    1. Metrics: sum(delta(nv_inference_request_success[1m]))
    2. Legend : {{model}}
    3. Panel title: Success request per sec
+   4. Apply
 2. Avg queue time per request
    1. Metrics: avg(delta(nv_inference_queue_duration_us[1m])/(1+delta(nv_inference_request_success[1m]))/1000)
    2. Legend : Triton Inference Server
    3. Panel title: Avg queue time per request(ms)
-   4. In order to show integer number, edit Panel> Axes>Left Y>Decimals>4 
+   4. Edit Panel > Axes > Left Y > Decimals to 4 
+   5. Apply
 3. GPU Utilization
    1. Metrics: DCGM_FI_DEV_GPU_UTIL
    2. Legend : GPU{{gpu}}
    3. Panel title: GPU Utilization
    4. Visualization : Gauge
+   5. Apply
 4. Replica number
    1. Metrics: kube_deployment_status_replicas{deployment="nvidia-tritoninferenceserver"}
    2. Legend : {{deployment}}
    3. Panel title: Replica number
-   4. In order to show integer number, edit Panel> Axes>Left Y>Decimals>0
-5. Modified dashboard, make it easier to read, and change “time ranges” to “Last 5 minutes” and refresh time to 5s at upper right side of Grafana dashboard.
+   4. Edit Panel > Axes > Left Y > Decimals to 0
+5. Modified dashboard, make it easier to read, and change “time ranges” to “Last 5 minutes” and "refresh time" to "5s" at upper right side of Grafana dashboard.
 6. Save the dashboard.
 
 ## Monitor Triton Inference Server status
-Run “stress_light.sh” to send requests to Triton Inference Server. 
 Observe “GPU Utilization”, “Avg queue time per request” and “Success requests per sec”. 
 “Success requests per sec” should be arounds **120**. 
 “Avg queue time per request” should be under **0.01ms**.
 
-Stop “stress_light.sh”, then run “stress_heavy.sh”. 
-Observe “GPU Utilization”, “Avg queue time per request” and “Success requests per sec”. 
-“Success requests per sec” should be arounds **240**. 
-“Avg queue time per request” should be under **3ms**.
+Stop “stress_light.sh” in the client container, then run “stress_heavy.sh”. 
+Observe “GPU Utilization”, “Avg queue time per request” and “Success requests per sec”.
+
+“Success requests per sec” should be arounds **240**.
+
+“Avg queue time per request” should be under **4ms**.
 
 Now, stop “stress_heavy.sh” and continue to config HPA.
 
@@ -329,23 +428,35 @@ Now, stop “stress_heavy.sh” and continue to config HPA.
 ## Create a custom metric for HPA
 Default metrics in Kubernetes doesn’t suitable for Triton Inferences Server scale out. Therefore, we will need to create a custom metric to trigger Triton Inferences Serve scale out. Prometheus Adapter is suitable for use with the autoscaling/v2 Horizontal Pod Autoscaler in Kubernetes 1.6+. It can also replace the metrics server on clusters that already run Prometheus and collect the appropriate metrics.
 
-Let’s go back to Provisioning node, get prometheus-adapter helm chart
+Modify the **url** and **port** to match current Prometheus server, so that custom metrics can be collected to Prometheus server
 ```
-$ helm inspect values prometheus-community/prometheus-adapter > ~/prometheus-adapter.values
-```
-
-Modify the URL and IP to match current Prometheus server, so that custom metrics can be collected to Prometheus server.
-```
-$ vi ~/prometheus-adapter.values
+$ cd ~/Triton-Inference-Server-on-Kubernetes/
+$ vi yaml/prometheus-adapter.values
 ```
 
-Add new custom metric for HPA, see prometheus-adapter.values for full content.
-The metricsQuery:
+Add new custom metric for HPA, 
+The metric already filled in prometheus-adapter.values:
 ```
-avg(delta(nv_inference_queue_duration_us[30s])/(1+delta(nv_inference_request_success[30s]))/1000)
+...
+...
+rules:
+  custom:
+  #Custom Trion metric for trigger Kubernetes HPA
+  - seriesQuery: 'nv_inference_queue_duration_us{namespace="default"}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+    name:
+      matches: "nv_inference_queue_duration_us"
+      as: "avg_time_queue_ms"
+    metricsQuery: "avg(delta(nv_inference_queue_duration_us{<<.LabelMatchers>>}[1m])/(1+delta(nv_inference_request_success{<<.LabelMatchers>>}[1m]))/1000) by (<<.GroupBy>>)"
+...
+...
+
 ```
 
-Is to calculate average inference request queue time in 30 seconds in ms.
+This is to calculate average inference request queue time in 30 seconds in ms.
 Learn more about custom metric, please visit Metrics Discovery and Presentation Configuration
 
 Deploy prometheus-adapter
@@ -353,7 +464,7 @@ Deploy prometheus-adapter
 $ helm install prometheus-community/prometheus-adapter \
    --namespace monitoring \
    --generate-name \
-   --values ~/prometheus-adapter.values
+   --values yaml/prometheus-adapter.values
 ```
 
 Check available custom metrics, it will take a few mins to collect metrics. You may need to install jq by “apt install jq”.
@@ -364,11 +475,53 @@ $ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1 | jq .
 Verify Triton metric could be collected by Kubernetes custom.metrics API.
 ```
 $ kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods/*/nv_inference_request_success" | jq .
+{
+  "kind": "MetricValueList",
+  "apiVersion": "custom.metrics.k8s.io/v1beta1",
+  "metadata": {
+    "selfLink": "/apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods/%2A/nv_inference_request_success"
+  },
+  "items": [
+    {
+      "describedObject": {
+        "kind": "Pod",
+        "namespace": "default",
+        "name": "nvidia-tritoninferenceserver-686bc4c4bc-vjrvl",
+        "apiVersion": "/v1"
+      },
+      "metricName": "nv_inference_request_success",
+      "timestamp": "2021-03-23T09:51:57Z",
+      "value": "4543",
+      "selector": null
+    }
+  ]
+}
 ```
 
 Verify the custom metric we created for HPA is set correctly.
 ```
 $ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods/*/avg_time_queue_ms | jq .
+{
+  "kind": "MetricValueList",
+  "apiVersion": "custom.metrics.k8s.io/v1beta1",
+  "metadata": {
+    "selfLink": "/apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods/%2A/avg_time_queue_ms"
+  },
+  "items": [
+    {
+      "describedObject": {
+        "kind": "Pod",
+        "namespace": "default",
+        "name": "nvidia-tritoninferenceserver-686bc4c4bc-vjrvl",
+        "apiVersion": "/v1"
+      },
+      "metricName": "avg_time_queue_ms",
+      "timestamp": "2021-03-23T09:52:31Z",
+      "value": "0",
+      "selector": null
+    }
+  ]
+}<>
 ```
 
 
