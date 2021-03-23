@@ -31,6 +31,7 @@ $ scripts/setup.sh
 ## DeepOps Configuration
 
 Ansible uses an inventory which outlines the servers in your cluster. The setup script from the previous step will copy an example inventory configuration to the config directory.
+For complete instructions to deploy Kubernetes cluster by DeepOps pleasae read [Kubernetes Deployment Guide](https://github.com/NVIDIA/deepops/tree/master/docs/k8s-cluster#kubernetes-deployment-guide)
 
 Edit the inventory:
 ```
@@ -38,13 +39,15 @@ $ vi config/inventory
 ```
 Edit inventory, fill in all nodes information in [ALL] section, master nodes in [kube-master] and [etcd] section, compute nodes in [kube-node] section
 ```
+...
+...
 ######
 # ALL NODES
 # NOTE: Use existing hostnames here, DeepOps will configure server hostnames to match these values
 ######
 [all]
-master-node    ansible_host=10.19.104.20
-gpu-node1      ansible_host=10.19.104.21
+master-node    ansible_host=<MASTER_NODE_IP>
+gpu-node1      ansible_host=<GPU_NODE_IP>
 
 ######
 # KUBERNETES
@@ -63,6 +66,8 @@ gpu-node1
 [k8s-cluster:children]
 kube-master
 kube-node
+...
+...
 ```
 
 Verify the configuration, provision node should be able to reach each node by Ansible
@@ -86,6 +91,8 @@ To use an existing nfs server server update the k8s_nfs_server and k8s_nfs_expor
 Additionally, the k8s_nfs_mkdir variable can be set to false if the export directory is already configured on the server. In this lab, we will use an existing NFS server server, therefore we will modify following:
 
 ```
+...
+...
 # NFS Client Provisioner
 # Playbook: nfs-client-provisioner.yml
 k8s_nfs_client_provisioner: true
@@ -97,8 +104,10 @@ k8s_deploy_nfs_server: false
 k8s_nfs_mkdir: true  configured with proper permissions
 
 # Fill your NFS Server IP and export path
-k8s_nfs_server: '10.19.104.15'
-k8s_nfs_export_path: '/nfsshare/k8s_nfs'
+k8s_nfs_server: '<NFS_SERVER_IP>'
+k8s_nfs_export_path: '<EXPORT_PATH>'
+...
+...
 ```
 
 Install Kubernetes using Ansible and Kubespray
@@ -116,7 +125,7 @@ gpu-node1     Ready    <none>   104m   v1.18.9
 master-node   Ready    master   105m   v1.18.9
 ```
 
-Check pods status:
+Check pods status, make suare all pods are running:
 ```
 $ kubectl get pods -A
 NAMESPACE                        NAME                                          READY   STATUS    RESTARTS   AGE
@@ -175,6 +184,7 @@ pod "nvidia-smi" deleted
 ## Create PVC
 Create a Persistent Volumes Claims for Triton Inference Server use. Storage size could be modified in yaml file
 ```
+$ cd ~/
 $ git clone https://github.com/YH-Wu/Triton-Inference-Server-on-Kubernetes.git
 $ cd Triton-Inference-Server-on-Kubernetes/
 $ kubectl apply -f yaml/pvc.yaml
@@ -183,8 +193,14 @@ Validating PVC has successfully been created.
 ```
 $ kubectl get pvc -A
 NAMESPACE   NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-default     triton-claim   Bound    pvc-81bed9b6-ccee-4a57-a1a0-1fb26890ed22   10Gi       RWX            nfs-client     5s
+default     triton-claim   Bound    pvc-eb358acc-874b-4f41-81c4-4974b2714220   10Gi       RWX            nfs-client     5s
 ```
+Validating volume created on NFS server
+```
+$ mason@nfs-server:/nfsshare/k8s_nfs$ ls
+default-triton-claim-pvc-eb358acc-874b-4f41-81c4-4974b2714220
+```
+
 RemovePVC (Optional, for debugging)
 ```
 $ kubectl delete pvc <PVC_NAME> -n <NAMESPACE>
@@ -223,13 +239,12 @@ DeepOps provides scripts you can run to configure a simple Load Balancer and/or 
 
 Set available IPs for load balance:
 ```
-$ vi yaml/metallb.yml
+$ vi yaml/metallb.yaml
 $ cp yaml/metallb.yaml ~/deepops/config/helm/metallb.yml
 $ . ~/deepops/scripts/k8s/deploy_loadbalancer.sh
 ```
 Remove metallb load balancer (Optional, for debugging)
 ```
-$ helm list -A #Check helm name
 $ helm delete metallb -n deepops-loadbalancer
 ```
 
@@ -241,7 +256,7 @@ Download model sample and upload to NFS storage
 $ git clone https://github.com/YH-Wu/server.git
 $ cd server/docs/examples
 $ ./fetch_models.sh
-$ scp -r model_repository/ <USERNAME>@<NFS_SERVER_IP>:<NFS_TRITION_CLAIM_PVC_LOCATION>/
+$ scp -r model_repository/ <USERNAME>@<NFS_SERVER_IP>:<TRITION_CLAIM_PVC_LOCATION>/
 ```
 ## Deploy Triton Inference Server by Helm Chart
 
@@ -253,9 +268,9 @@ $ helm install nvidia tritoninferenceserver
 
 Remove Triton Inference Server (Optional, for debugging)
 ```
-$ helm list #Check helm name
 $ helm delete nvidia
 ```
+
 ## Verify Trion Inference Server Status
 Make sure the pod is running, it may take a few mins to download the image
 ```
@@ -324,7 +339,7 @@ $ chmod +x Triton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
 $ chmod +x Triton-Inference-Server-on-Kubernetes/scripts/stress_heavy.sh
 
 # Modified URL
-$ vi riton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
+$ vi Triton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
 
 $ ./Triton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
 ```
@@ -357,9 +372,9 @@ Prometheus: http://\<kube-master>:30500<br>
 Alertmanager: http://\<kube-master>:30400<br>
 
 
-You should be able to observe metrics such as GPU Utilization, memory usage in GPU nodes dashboard but there are no Triton-related metrics for monitoring. Therefore, let’s add Triton-related metrics into Prometheus server in the following sections.
+You should be able to observe metrics such as GPU Utilization, memory usage in GPU nodes dashboard. However, there are no Triton-related metrics to monitoring. Therefore, let’s add Triton-related metrics into Prometheus server in the following sections.
 
-\<TODO>SCREENSHOT
+\<TODO>SCREENSHOT of GPU nodes dashboard
 
 # Monitor Triton Inference Server
 ## Add Triton Metrics into Prometheus server
@@ -369,7 +384,7 @@ Delete the current monitoring service because we will modify it.
 $ ./deploy_monitoring.sh -d
 ```
 
-Add Triton Inference Server Metrics, we will need to modify deepops/config/helm/monitoring.yml, see full content of monitoring.yml
+Triton Inference Server Metrics has benn added into monitoring.yaml, see full content in monitoring.yaml
 ```
 $ cp ~/Triton-Inference-Server-on-Kubernetes/yaml/monitoring.yaml ~/deepops/config/helm/monitoring.yml 
 ```
@@ -386,7 +401,7 @@ Prometheus: http://\<kube-master>:30500<br>
 Alertmanager: http://\<kube-master>:30400<br>
 
 
-Go to Prometheus server and simply search “inference”, you should be able to see Triton-related metrics.
+Go to Prometheus server and simply search “nv_inference”, you should be able to see Triton-related metrics.
 
 ## Create monitor dashboard for Triton Inference Server
 Go to Grafana, create a dashboard and add new panels by following:
@@ -526,7 +541,7 @@ $ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods/
       "selector": null
     }
   ]
-}<>
+}
 ```
 
 
@@ -539,13 +554,15 @@ $ helm delete prometheus-adapter-1612505904 -n monitoring
 ## Create HPA for Triton Inference Server
 Create a HPA, set a value so that custom metric can trigger HPA, in this lab, the target value should be between 3ms and 0.005 ms, which is between 3000m and 5m. See hpa.yaml for full content. Let’s put 1500m(1.5ms) here. 
 ```
-$ vi ~/hpa.yaml
-$ kubectl apply -f ~/hpa.yaml
+$ vi yaml/hpa.yaml
+$ kubectl apply -f yaml/hpa.yaml
 ```
 
 Validating HPA has successfully been created.
 ```
 $ kubectl get hpa -A
+NAMESPACE   NAME                    REFERENCE                                 TARGETS    MINPODS   MAXPODS   REPLICAS   AGE
+default     triton-metirc-app-hpa   Deployment/nvidia-tritoninferenceserver   7m/1500m   1         2         1          17s
 ```
 
 Wait for a few seconds to get the custom metric we set.
