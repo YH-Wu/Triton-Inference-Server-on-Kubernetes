@@ -570,7 +570,7 @@ Wait for a few seconds to get the custom metric we set.
 
 Remove HPA (Optional, for debugging)
 ```
-$ kubectl delete -f ~/hpa.yaml
+$ kubectl delete -f yaml/hpa.yaml
 ```
 
 ## Test Triton Inference Server with HPA
