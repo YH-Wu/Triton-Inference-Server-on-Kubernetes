@@ -7,8 +7,8 @@ You will need to prepare at least 3 nodes, one master node, one compute node wit
 
 - **OS** : Ubuntu 20.04 or 18.04. 
 - **GPU** : NVIDIA Pascal, Volta, Turing, and Ampere Architecture GPU families.
-- **External NFS storage** : If you don’t have one, please refer to APPENDIX to build one.
 - **IPs** : Available IPs for master node, provisioning node, compute node and load balancer.
+- **External NFS storage(Optional)** 
 
 # Build Kubernetes cluster by DeepOps
 
@@ -88,7 +88,9 @@ The default behavior of DeepOps is to setup an NFS server on the first kube-mast
 
 To use an existing nfs server server update the k8s_nfs_server and k8s_nfs_export_path variables in config/group_vars/k8s-cluster.yml and set the k8s_deploy_nfs_server to false in config/group_vars/k8s-cluster.yml. 
 
-Additionally, the k8s_nfs_mkdir variable can be set to false if the export directory is already configured on the server. In this lab, we will use an existing NFS server server, therefore we will modify following:
+Additionally, the k8s_nfs_mkdir variable can be set to false if the export directory is already configured on the server. 
+
+In this lab, we will use an existing NFS server server, therefore we will modify following:
 
 ```
 ...
@@ -241,7 +243,8 @@ Set available IPs for load balance:
 ```
 $ vi yaml/metallb.yaml
 $ cp yaml/metallb.yaml ~/deepops/config/helm/metallb.yml
-$ . ~/deepops/scripts/k8s/deploy_loadbalancer.sh
+$ cd ~/deepops/scripts/k8s/
+$ ./deploy_loadbalancer.sh
 ```
 Remove metallb load balancer (Optional, for debugging)
 ```
@@ -253,11 +256,17 @@ $ helm delete metallb -n deepops-loadbalancer
 
 Download model sample and upload to NFS storage
 ```
-$ git clone https://github.com/YH-Wu/server.git
+$ cd && git clone https://github.com/YH-Wu/server.git
 $ cd server/docs/examples
 $ ./fetch_models.sh
 $ scp -r model_repository/ <USERNAME>@<NFS_SERVER_IP>:<TRITION_CLAIM_PVC_LOCATION>/
 ```
+Make sure model_repository already uploaded to NFS Server
+```
+$ mason@nfs-server:/nfsshare/k8s_nfs/default-triton-claim-pvc-eb358acc-874b-4f41-81c4-4974b2714220$ ls
+model_repository
+```
+
 ## Deploy Triton Inference Server by Helm Chart
 
 Deploy Triton Inference Server
@@ -335,13 +344,14 @@ To learn the latest usage of client sample, please visit [Triton Inference Serve
 Here are some examples to simulate light loading and heavy loading, let's run “stress_light.sh” and monitor its status by Grafana dashboard. Practice following to create a monitoring service for Triton Inference Server.
 ```
 $ git clone https://github.com/YH-Wu/Triton-Inference-Server-on-Kubernetes.git
-$ chmod +x Triton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
-$ chmod +x Triton-Inference-Server-on-Kubernetes/scripts/stress_heavy.sh
+$ cd Triton-Inference-Server-on-Kubernetes/scripts
+$ chmod +x stress_light.sh
+$ chmod +x stress_heavy.sh
 
 # Modified URL
-$ vi Triton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
+$ vi stress_light.sh
 
-$ ./Triton-Inference-Server-on-Kubernetes/scripts/stress_light.sh
+$ ./stress_light.sh
 ```
 
 ## Deploy monitor service 
@@ -560,7 +570,7 @@ $ kubectl apply -f yaml/hpa.yaml
 
 Validating HPA has successfully been created.
 ```
-$ kubectl get hpa -A
+$ kubectl get hpa
 NAMESPACE   NAME                    REFERENCE                                 TARGETS    MINPODS   MAXPODS   REPLICAS   AGE
 default     triton-metirc-app-hpa   Deployment/nvidia-tritoninferenceserver   7m/1500m   1         2         1          17s
 ```
