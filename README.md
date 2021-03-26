@@ -563,7 +563,7 @@ $ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods/
 Remove Prometheus Adapter (Optional, for debugging)
 ```
 $ helm list -A #Check helm name
-$ helm delete prometheus-adapter-1612505904 -n monitoring
+$ helm delete <PROMETHEUS_ADAPTER_NAME> -n monitoring
 ```
 
 ## Create HPA for Triton Inference Server
