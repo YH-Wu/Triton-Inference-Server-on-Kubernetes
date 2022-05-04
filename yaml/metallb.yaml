@@ -4,7 +4,7 @@ configInline:
     protocol: layer2
 
     addresses:
-    - 10.19.104.24-10.19.104.24 
+    - 10.19.104.29-10.19.104.31  #Please at lease provide 2 avaliable IPs
 
 controller:
   nodeSelector:
