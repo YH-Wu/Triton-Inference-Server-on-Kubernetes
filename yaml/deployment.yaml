@@ -69,7 +69,7 @@ spec:
               port: 8000
               path: /v2/health/live
           readinessProbe:
-            initialDelaySeconds: 5
+            initialDelaySeconds: 15
             periodSeconds: 5
             httpGet:
                port: 8000
