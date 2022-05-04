@@ -5,7 +5,7 @@ You will need to prepare at least 3 nodes, one master node, one compute node wit
 
 # Prerequisites
 
-- **OS** : Ubuntu 20.04 or 18.04
+- **OS** : Ubuntu 20.04
 - **GPU** : NVIDIA Pascal, Volta, Turing, and Ampere Architecture GPU families
 - **IPs** : Available IPs for master node, provisioning node, compute node and load balancer
 - **External NFS storage(Optional)** 
@@ -18,7 +18,7 @@ We are going to use DeepOps to deploy kubernetes and related packages
 ```
 $ git clone https://github.com/NVIDIA/deepops.git
 $ cd deepops
-$ git checkout release-21.03
+$ git checkout release-22.04
 ```
 
 ## Setup for Provision Node
@@ -46,22 +46,24 @@ Edit inventory, fill in all nodes information in [ALL] section, master nodes in 
 # NOTE: Use existing hostnames here, DeepOps will configure server hostnames to match these values
 ######
 [all]
-master-node    ansible_host=<MASTER_NODE_IP>
-gpu-node1      ansible_host=<GPU_NODE_IP>
+mason-master-node    ansible_host=<MASTER_NODE_IP>
+mason-compute-node1  ansible_host=<GPU_NODE_IP>
+mason-compute-node2  ansible_host=<GPU_NODE_IP>
 
 ######
 # KUBERNETES
 ######
 [kube-master]
-master-node
+mason-master-node
 
 # Odd number of nodes required
 [etcd]
-master-node
+mason-master-node
 
 # Also add mgmt/master nodes here if they will run non-control plane jobs
 [kube-node]
-gpu-node1
+mason-compute-node1
+mason-compute-node2
 
 [k8s-cluster:children]
 kube-master
@@ -103,11 +105,23 @@ k8s_nfs_client_provisioner: true
 k8s_deploy_nfs_server: false
 
 # Set to false if an export dir is already
-k8s_nfs_mkdir: true  configured with proper permissions
+k8s_nfs_mkdir: false  # Set to false if an export dir is already configured with proper permissions
 
 # Fill your NFS Server IP and export path
 k8s_nfs_server: '<NFS_SERVER_IP>'
 k8s_nfs_export_path: '<EXPORT_PATH>'
+...
+...
+```
+
+Note that as part of the kubernetes deployment process, the default behavior is to also deploy the NVIDIA k8s-device-plugin for GPU support. The GPU Operator is an alternative deployment method, which will deploy the device plugin and leverage driver containers within kubernetes. To enable the GPU Operator in DeepOps...
+```
+...
+...
+
+vi config/group_vars/k8s-cluster.yml
+
+# set: deepops_gpu_operator_enabled: true
 ...
 ...
 ```
@@ -122,53 +136,85 @@ Verify that the Kubernetes cluster is running, you should be able to see ALL pod
 Check nodes status:
 ```
 $ kubectl get nodes
-NAME          STATUS   ROLES    AGE    VERSION
-gpu-node1     Ready    <none>   104m   v1.18.9
-master-node   Ready    master   105m   v1.18.9
+NAME                  STATUS   ROLES                  AGE   VERSION
+mason-compute-node1   Ready    <none>                 18m   v1.21.6
+mason-compute-node2   Ready    <none>                 18m   v1.21.6
+mason-master-node     Ready    control-plane,master   19m   v1.21.6
 ```
 
-Check pods status, make suare all pods are running:
+Check pods status, make suare all pods are running, you may need to wait a while for nvidia-cuda-validator complete:
 ```
 $ kubectl get pods -A
-NAMESPACE                        NAME                                          READY   STATUS    RESTARTS   AGE
-deepops-nfs-client-provisioner   nfs-client-provisioner-9d67488d8-7cz54        1/1     Running   0          102m
-kube-system                      calico-kube-controllers-56f65f7cbd-h7xz9      1/1     Running   0          105m
-kube-system                      calico-node-4dzmg                             1/1     Running   1          106m
-kube-system                      calico-node-cflcj                             1/1     Running   2          106m
-kube-system                      coredns-dff8fc7d-5bn7t                        1/1     Running   1          105m
-kube-system                      coredns-dff8fc7d-9tchk                        1/1     Running   0          105m
-kube-system                      dns-autoscaler-66498f5c5f-q48wp               1/1     Running   0          105m
-kube-system                      kube-apiserver-master-node                    1/1     Running   0          107m
-kube-system                      kube-controller-manager-master-node           1/1     Running   0          107m
-kube-system                      kube-proxy-2jc2s                              1/1     Running   1          106m
-kube-system                      kube-proxy-r6944                              1/1     Running   0          107m
-kube-system                      kube-scheduler-master-node                    1/1     Running   0          107m
-kube-system                      kubernetes-dashboard-c8c99b87c-rsm7c          1/1     Running   1          105m
-kube-system                      kubernetes-metrics-scraper-5c78444f64-gksm4   1/1     Running   1          105m
-kube-system                      nginx-proxy-gpu-node1                         1/1     Running   1          106m
-kube-system                      nodelocaldns-q58cj                            1/1     Running   0          105m
-kube-system                      nodelocaldns-tbcqr                            1/1     Running   2          105m
-kube-system                      nvidia-device-plugin-ccqn8                    1/1     Running   0          102m
-node-feature-discovery           gpu-feature-discovery-tns48                   1/1     Running   0          103m
-node-feature-discovery           nfd-master-bc8c476d9-z82ct                    1/1     Running   0          103m
-node-feature-discovery           nfd-worker-q8646                              1/1     Running   0          103m
-node-feature-discovery           nfd-worker-s2w7j                              1/1     Running   0          102m
+NAMESPACE                        NAME                                                              READY   STATUS      RESTARTS   AGE
+deepops-nfs-client-provisioner   nfs-subdir-external-provisioner-7967cbb457-vcsgj                  1/1     Running     0          8m25s
+default                          gpu-operator-5f8b7c4f59-kfq7n                                     1/1     Running     0          13m
+default                          nvidia-gpu-operator-node-feature-discovery-master-74db7c56fbhsv   1/1     Running     0          13m
+default                          nvidia-gpu-operator-node-feature-discovery-worker-fhknv           1/1     Running     0          13m
+default                          nvidia-gpu-operator-node-feature-discovery-worker-q9j9h           1/1     Running     0          13m
+default                          nvidia-gpu-operator-node-feature-discovery-worker-qbplg           1/1     Running     0          13m
+gpu-operator-resources           gpu-feature-discovery-fgdpt                                       1/1     Running     3          11m
+gpu-operator-resources           gpu-feature-discovery-z2hvm                                       1/1     Running     1          12m
+gpu-operator-resources           nvidia-container-toolkit-daemonset-n2zfj                          1/1     Running     0          12m
+gpu-operator-resources           nvidia-container-toolkit-daemonset-sp6fq                          1/1     Running     0          11m
+gpu-operator-resources           nvidia-cuda-validator-6j6qh                                       0/1     Completed   0          80s
+gpu-operator-resources           nvidia-cuda-validator-jpfnx                                       0/1     Completed   0          90s
+gpu-operator-resources           nvidia-dcgm-56fsk                                                 1/1     Running     0          12m
+gpu-operator-resources           nvidia-dcgm-exporter-dznc8                                        1/1     Running     0          11m
+gpu-operator-resources           nvidia-dcgm-exporter-kw57n                                        1/1     Running     3          12m
+gpu-operator-resources           nvidia-dcgm-ffctm                                                 1/1     Running     1          11m
+gpu-operator-resources           nvidia-device-plugin-daemonset-c8mjh                              1/1     Running     2          11m
+gpu-operator-resources           nvidia-device-plugin-daemonset-zxm5c                              1/1     Running     1          12m
+gpu-operator-resources           nvidia-device-plugin-validator-kck95                              0/1     Completed   0          84s
+gpu-operator-resources           nvidia-device-plugin-validator-t2lnc                              0/1     Completed   0          73s
+gpu-operator-resources           nvidia-driver-daemonset-7bkqb                                     1/1     Running     1          13m
+gpu-operator-resources           nvidia-driver-daemonset-7sjmk                                     1/1     Running     0          13m
+gpu-operator-resources           nvidia-operator-validator-58dcz                                   1/1     Running     0          12m
+gpu-operator-resources           nvidia-operator-validator-qppgb                                   1/1     Running     1          11m
+kube-system                      calico-kube-controllers-8575b76f66-2972h                          1/1     Running     0          25m
+kube-system                      calico-node-c9t45                                                 1/1     Running     1          25m
+kube-system                      calico-node-gxppq                                                 1/1     Running     0          25m
+kube-system                      calico-node-pzbft                                                 1/1     Running     1          25m
+kube-system                      coredns-8474476ff8-9t7t7                                          1/1     Running     0          12m
+kube-system                      coredns-8474476ff8-wn6q5                                          1/1     Running     0          25m
+kube-system                      dns-autoscaler-7df78bfcfb-l5wlw                                   1/1     Running     0          25m
+kube-system                      kube-apiserver-mason-master-node                                  1/1     Running     0          26m
+kube-system                      kube-controller-manager-mason-master-node                         1/1     Running     1          26m
+kube-system                      kube-proxy-v4rmx                                                  1/1     Running     0          9m39s
+kube-system                      kube-proxy-vpkbd                                                  1/1     Running     0          9m39s
+kube-system                      kube-proxy-whl9c                                                  1/1     Running     0          9m39s
+kube-system                      kube-scheduler-mason-master-node                                  1/1     Running     1          26m
+kube-system                      kubernetes-dashboard-6c96f5b677-49dfc                             1/1     Running     1          25m
+kube-system                      kubernetes-metrics-scraper-694c6bdbc9-ltrpp                       1/1     Running     1          25m
+kube-system                      nginx-proxy-mason-compute-node1                                   1/1     Running     1          25m
+kube-system                      nginx-proxy-mason-compute-node2                                   1/1     Running     1          25m
+kube-system                      nodelocaldns-5w5sk                                                1/1     Running     1          25m
+kube-system                      nodelocaldns-bt8k9                                                1/1     Running     0          25m
+kube-system                      nodelocaldns-tzmtf                                                1/1     Running     1          25m
+kube-system                      nvidia-device-plugin-2gczf                                        1/1     Running     0          5m20s
+kube-system                      nvidia-device-plugin-gjpkb                                        1/1     Running     0          6m18s
+node-feature-discovery           gpu-feature-discovery-9c8nt                                       1/1     Running     9          23m
+node-feature-discovery           gpu-feature-discovery-g7h7f                                       1/1     Running     9          23m
+node-feature-discovery           nfd-master-6dd87d999-vdlwj                                        1/1     Running     0          23m
+node-feature-discovery           nfd-worker-fm5vd                                                  1/1     Running     0          8m50s
+node-feature-discovery           nfd-worker-nbpkz                                                  1/1     Running     0          23m
+node-feature-discovery           nfd-worker-p9tr9                                                  1/1     Running     0          23m
 ```
 
 
 Optionally, test a GPU job to ensure that your Kubernetes setup can tap into GPUs
 ```
-$ kubectl run nvidia-smi --rm -t -i --restart=Never --image=nvidia/cuda:10.0-runtime-ubi7 --limits=nvidia.com/gpu=1 -- nvidia-smi
-Fri Mar 26 04:22:57 2021
+$ kubectl run nvidia-smi --rm -t -i --restart=Never --image=nvidia/cuda:11.0-runtime-ubi7 --limits=nvidia.com/gpu=1 -- nvidia-smi
+Flag --limits has been deprecated, has no effect and will be removed in the future.
+Fri Apr  1 08:17:03 2022
 +-----------------------------------------------------------------------------+
-| NVIDIA-SMI 450.80.02    Driver Version: 450.80.02    CUDA Version: 11.0     |
+| NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
 |-------------------------------+----------------------+----------------------+
 | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  Tesla V100-DGXS...  On   | 00000000:0F:00.0 Off |                    0 |
-| N/A   39C    P0    38W / 300W |     14MiB / 16158MiB |      0%      Default |
+|   0  NVIDIA RTX A6000    On   | 00000000:0B:00.0 Off |                    0 |
+| 30%   42C    P8    32W / 300W |      0MiB / 45634MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 
@@ -177,6 +223,7 @@ Fri Mar 26 04:22:57 2021
 |  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
 |        ID   ID                                                   Usage      |
 |=============================================================================|
+|  No running processes found                                                 |
 +-----------------------------------------------------------------------------+
 pod "nvidia-smi" deleted
 ```
@@ -241,7 +288,7 @@ DeepOps provides scripts you can run to configure a simple Load Balancer and/or 
 
 Set available IPs for load balance:
 ```
-$ vi yaml/metallb.yaml
+$ vi yaml/metallb.yaml #at least provide 2 IPs
 $ cp yaml/metallb.yaml ~/deepops/config/helm/metallb.yml
 $ cd ~/deepops/scripts/k8s/
 $ ./deploy_loadbalancer.sh
@@ -256,7 +303,7 @@ $ helm delete metallb -n deepops-loadbalancer
 
 Download model sample and upload to NFS storage
 ```
-$ cd && git clone https://github.com/YH-Wu/server.git
+$ cd && git clone https://github.com/triton-inference-server/server.git
 $ cd server/docs/examples
 $ ./fetch_models.sh
 $ scp -r model_repository/ <USERNAME>@<NFS_SERVER_IP>:<TRITION_CLAIM_PVC_LOCATION>/
@@ -331,7 +378,7 @@ $ sudo nvidia-smi -lgc 1395,1395 # For NVIDIA Quadro RTX 8000
 <br>
 Launch Triton Client Example container
 ```
-$ sudo docker run -it --rm --net=host nvcr.io/nvidia/tritonserver:20.09-py3-clientsdk
+$ sudo docker run -it --rm --net=host nvcr.io/nvidia/tritonserver:22.03-py3-sdk
 ```
 
 Send inference request to Triton Inference Server
@@ -345,8 +392,7 @@ Here are some examples to simulate light loading and heavy loading, let's run â€
 ```
 $ git clone https://github.com/YH-Wu/Triton-Inference-Server-on-Kubernetes.git
 $ cd Triton-Inference-Server-on-Kubernetes/scripts
-$ chmod +x stress_light.sh 
-$ chmod +x stress_heavy.sh
+$ chmod +x stress_light.sh && chmod +x stress_heavy.sh 
 
 # Modified URL
 $ vi stress_light.sh
@@ -355,7 +401,7 @@ $ ./stress_light.sh
 ```
 
 ## Deploy monitor service 
-Let's **go back to provision node**, deploy Prometheus and Grafana to monitor Kubernetes and cluster nodes
+Keep the stress test running. Let's **go back to provision node**, deploy Prometheus and Grafana to monitor Kubernetes and cluster nodes
 ```
 $ cd ~/deepops/scripts/k8s
 $ ./deploy_monitoring.sh

@@ -9,6 +9,6 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 10Gi
+      storage: 64Gi
       # Storage size could be modified
 

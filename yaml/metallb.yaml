@@ -3,9 +3,8 @@ configInline:
   - name: default
     protocol: layer2
 
-    #IP segment should be same as management segment
     addresses:
-    - <IP_RANGE>-<IP_RANGE> 
+    - 10.19.104.24-10.19.104.24 
 
 controller:
   nodeSelector:

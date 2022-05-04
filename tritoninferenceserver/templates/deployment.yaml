@@ -73,7 +73,7 @@ spec:
               path: /v2/health/live
               port: http
           readinessProbe:
-            initialDelaySeconds: 5
+            initialDelaySeconds: 15
             periodSeconds: 5
             httpGet:
               path: /v2/health/ready
