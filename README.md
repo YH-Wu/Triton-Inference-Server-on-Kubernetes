@@ -118,9 +118,6 @@ Note that as part of the kubernetes deployment process, the default behavior is 
 ```
 ...
 ...
-
-vi config/group_vars/k8s-cluster.yml
-
 # Enable GPU Operator
 # set: deepops_gpu_operator_enabled: true
 
