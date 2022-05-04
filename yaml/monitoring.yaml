@@ -4,12 +4,41 @@ prometheusOperator:
 
 prometheus:
   ingress:
+    pathType: ImplementationSpecific
     enabled: true
     annotations:
       kubernetes.io/ingress.class: "nginx"
       nginx.ingress.kubernetes.io/ssl-redirect: "false"
       nginx.ingress.kubernetes.io/rewrite-target: /
+  server:
+    persistentVolume:
+      enabled: true
   prometheusSpec:
+    additionalScrapeConfigs:
+    - job_name: gpu-metrics
+      scrape_interval: 1s
+      metrics_path: /metrics
+      scheme: http
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - gpu-operator-resources
+          - monitoring
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        action: replace
+        target_label: kubernetes_node
+      - source_labels: [__meta_kubernetes_pod_host_ip]
+        action: replace
+        target_label: kubernetes_ip
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
     nodeSelector:
       node-role.kubernetes.io/master: ""
   service:
@@ -23,7 +52,10 @@ prometheus:
     endpoints:
     - port: scrape
       interval: 1s
-      honorLabels: true
+      honorLabels: true       
+  serviceMonitorsSelector:
+    matchLabels:
+      prometheus: "kube-prometheus"
   #additionalServiceMonitors for Triton Inference Server
   - name: triton-exporter
     selector:
@@ -37,14 +69,11 @@ prometheus:
     - port: metrics-inference-server 
       #Check port by describe the deployment
       interval: 1s
-      honorLabels: true
-      
-  serviceMonitorsSelector:
-    matchLabels:
-      prometheus: "kube-prometheus"
+      honorLabels: tru
 
 alertmanager:
   ingress:
+    pathType: ImplementationSpecific
     enabled: true
     annotations:
       kubernetes.io/ingress.class: "nginx"
@@ -60,6 +89,7 @@ alertmanager:
 grafana:
   adminPassword: deepops
   ingress:
+    pathType: ImplementationSpecific
     enabled: true
     annotations:
       kubernetes.io/ingress.class: "nginx"
@@ -72,4 +102,3 @@ grafana:
     nodePort: 30200
   serverDashboardConfigmaps:
     - kube-prometheus-grafana-gpu
-
