@@ -53,9 +53,6 @@ prometheus:
     - port: scrape
       interval: 1s
       honorLabels: true       
-  serviceMonitorsSelector:
-    matchLabels:
-      prometheus: "kube-prometheus"
   #additionalServiceMonitors for Triton Inference Server
   - name: triton-exporter
     selector:
@@ -69,7 +66,10 @@ prometheus:
     - port: metrics-inference-server 
       #Check port by describe the deployment
       interval: 1s
-      honorLabels: tru
+      honorLabels: true
+  serviceMonitorsSelector:
+    matchLabels:
+      prometheus: "kube-prometheus"
 
 alertmanager:
   ingress:
