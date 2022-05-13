@@ -5,8 +5,8 @@ configInline:
 
     addresses: #Please at lease provide 2 avaliable IPs
     # Two specific IP
-    - 10.19.104.29/32
-    - 10.19.104.35/32
+    - 10.19.104.21/32
+    - 10.19.104.22/32
     # Or a range of IP
     #- 10.19.104.40-10.19.104.50
     # Or a subnet
