@@ -3,9 +3,14 @@ configInline:
   - name: default
     protocol: layer2
 
-    addresses:
-    - 10.19.104.29-10.19.104.31  #Please at lease provide 2 avaliable IPs
-
+    addresses: #Please at lease provide 2 avaliable IPs
+    # Two specific IP
+    - 10.19.104.29/32
+    - 10.19.104.35/32
+    # Or a range of IP
+    #- 10.19.104.40-10.19.104.50
+    # Or a subnet
+    #- 10.19.104.0/24
 controller:
   nodeSelector:
     node-role.kubernetes.io/master: ""
