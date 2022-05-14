@@ -999,7 +999,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "DCGM_FI_DEV_GPU_UTIL{instance=\"$hostname:9400\"}",
+          "expr": "DCGM_FI_PROF_GR_ENGINE_ACTIVE{instance=\"$hostname:9400\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1107,7 +1107,7 @@
       "pluginVersion": "8.4.2",
       "targets": [
         {
-          "expr": "avg(DCGM_FI_DEV_GPU_UTIL{instance=\"$hostname:9400\"})",
+          "expr": "avg(DCGM_FI_PROF_GR_ENGINE_ACTIVE{instance=\"$hostname:9400\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
