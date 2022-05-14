@@ -55,6 +55,9 @@ spec:
           resources:
             limits:
               nvidia.com/gpu: {{ .Values.image.numGpus }}
+              #If using MIG, uncomment following:
+              #nvidia.com/mig-1g.5gb: {{ .Values.image.numGpus }}
+              #nvidia.com/mig-2g.10gb: {{ .Values.image.numGpus }}
           command: ["/bin/bash"]
           args: ["-c", "tritonserver --model-repository={{ .Values.image.modelRepositoryPath }}"]
           env:
