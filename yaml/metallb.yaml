@@ -3,7 +3,7 @@ configInline:
   - name: default
     protocol: layer2
 
-    addresses: #Please at lease provide 2 avaliable IPs
+    addresses: #Please at least provide 2 available IPs
     # Two specific IP
     - 10.19.104.21/32
     - 10.19.104.22/32
