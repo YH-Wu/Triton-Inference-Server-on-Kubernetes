@@ -49,7 +49,7 @@ resources: {}
   #   memory: 128Mi
 
 rules:
-#  default: true
+  #Here we create a customer metric for HPA, we called it "avg_time_queue_ms", the metric meaning average inference request queue time in 30 seconds in ms.
   custom:
   - seriesQuery: 'nv_inference_queue_duration_us{namespace="default"}'
     resources:
@@ -60,8 +60,9 @@ rules:
       matches: "nv_inference_queue_duration_us"
       as: "avg_time_queue_ms"
     metricsQuery: "avg(delta(nv_inference_queue_duration_us{<<.LabelMatchers>>}[1m])/(1+delta(nv_inference_request_success{<<.LabelMatchers>>}[1m]))/1000) by (<<.GroupBy>>)"
-  # Mounts a configMap with pre-generated rules for use. Overrides the
-  # default, custom, external and resource entries
+
+#  Mounts a configMap with pre-generated rules for use. Overrides the
+#  default, custom, external and resource entries
 #  existing:
 #  external: []
 # - seriesQuery: '{__name__=~"^some_metric_count$"}'
