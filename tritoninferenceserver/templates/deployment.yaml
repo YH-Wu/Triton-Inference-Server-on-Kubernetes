@@ -55,7 +55,7 @@ spec:
           resources:
             limits:
               nvidia.com/gpu: {{ .Values.image.numGpus }}
-              #If using MIG, uncomment following:
+              #If using MIG, uncomment following and commnet above:
               #nvidia.com/mig-1g.5gb: {{ .Values.image.numGpus }}
               #nvidia.com/mig-2g.10gb: {{ .Values.image.numGpus }}
           command: ["/bin/bash"]
