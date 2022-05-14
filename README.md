@@ -6,7 +6,7 @@ You will need to prepare at least 3 nodes, one master node, one compute node wit
 # Prerequisites
 
 - **OS** : Ubuntu 20.04
-- **GPU** : NVIDIA Pascal, Volta, Turing, and Ampere Architecture GPU families
+- **GPU** : NVIDIA Volta, Turing, and Ampere Architecture GPU families
 - **IPs** : Available IPs for master node, provisioning node, compute node and load balancer
 - **External NFS storage(Optional)** 
 
@@ -47,8 +47,8 @@ Edit inventory, fill in all nodes information in [ALL] section, master nodes in 
 ######
 [all]
 mason-master-node    ansible_host=<MASTER_NODE_IP>
-mason-compute-node1  ansible_host=<GPU_NODE_IP>
-mason-compute-node2  ansible_host=<GPU_NODE_IP>
+mason-compute-node1  ansible_host=<GPU_NODE_IP1>
+mason-compute-node2  ansible_host=<GPU_NODE_IP2>
 
 ######
 # KUBERNETES
@@ -122,7 +122,7 @@ Note that as part of the kubernetes deployment process, the default behavior is 
 # set: deepops_gpu_operator_enabled: true
 
 # Enable host-level drivers (must be 'true' for clusters with pre-installed NVIDIA drivers or DGX systems)
-# set: gpu_operator_preinstalled_nvidia_software: true
+# set: gpu_operator_preinstalled_nvidia_software: false
 ...
 ...
 ```
@@ -137,68 +137,61 @@ Verify that the Kubernetes cluster is running, you should be able to see ALL pod
 Check nodes status:
 ```
 $ kubectl get nodes
-NAME                  STATUS   ROLES                  AGE   VERSION
-mason-compute-node1   Ready    <none>                 18m   v1.21.6
-mason-compute-node2   Ready    <none>                 18m   v1.21.6
-mason-master-node     Ready    control-plane,master   19m   v1.21.6
+NAME                  STATUS   ROLES                  AGE     VERSION
+mason-compute-node1   Ready    <none>                 7m25s   v1.22.8
+mason-compute-node2   Ready    <none>                 7m25s   v1.22.8
+mason-master-node     Ready    control-plane,master   8m22s   v1.22.8
 ```
 
 Check pods status, make suare all pods are running, you may need to wait a while for nvidia-cuda-validator complete:
 ```
 $ kubectl get pods -A
 NAMESPACE                        NAME                                                              READY   STATUS      RESTARTS   AGE
-deepops-nfs-client-provisioner   nfs-subdir-external-provisioner-7967cbb457-vcsgj                  1/1     Running     0          8m25s
-default                          gpu-operator-5f8b7c4f59-kfq7n                                     1/1     Running     0          13m
-default                          nvidia-gpu-operator-node-feature-discovery-master-74db7c56fbhsv   1/1     Running     0          13m
-default                          nvidia-gpu-operator-node-feature-discovery-worker-fhknv           1/1     Running     0          13m
-default                          nvidia-gpu-operator-node-feature-discovery-worker-q9j9h           1/1     Running     0          13m
-default                          nvidia-gpu-operator-node-feature-discovery-worker-qbplg           1/1     Running     0          13m
-gpu-operator-resources           gpu-feature-discovery-fgdpt                                       1/1     Running     3          11m
-gpu-operator-resources           gpu-feature-discovery-z2hvm                                       1/1     Running     1          12m
-gpu-operator-resources           nvidia-container-toolkit-daemonset-n2zfj                          1/1     Running     0          12m
-gpu-operator-resources           nvidia-container-toolkit-daemonset-sp6fq                          1/1     Running     0          11m
-gpu-operator-resources           nvidia-cuda-validator-6j6qh                                       0/1     Completed   0          80s
-gpu-operator-resources           nvidia-cuda-validator-jpfnx                                       0/1     Completed   0          90s
-gpu-operator-resources           nvidia-dcgm-56fsk                                                 1/1     Running     0          12m
-gpu-operator-resources           nvidia-dcgm-exporter-dznc8                                        1/1     Running     0          11m
-gpu-operator-resources           nvidia-dcgm-exporter-kw57n                                        1/1     Running     3          12m
-gpu-operator-resources           nvidia-dcgm-ffctm                                                 1/1     Running     1          11m
-gpu-operator-resources           nvidia-device-plugin-daemonset-c8mjh                              1/1     Running     2          11m
-gpu-operator-resources           nvidia-device-plugin-daemonset-zxm5c                              1/1     Running     1          12m
-gpu-operator-resources           nvidia-device-plugin-validator-kck95                              0/1     Completed   0          84s
-gpu-operator-resources           nvidia-device-plugin-validator-t2lnc                              0/1     Completed   0          73s
-gpu-operator-resources           nvidia-driver-daemonset-7bkqb                                     1/1     Running     1          13m
-gpu-operator-resources           nvidia-driver-daemonset-7sjmk                                     1/1     Running     0          13m
-gpu-operator-resources           nvidia-operator-validator-58dcz                                   1/1     Running     0          12m
-gpu-operator-resources           nvidia-operator-validator-qppgb                                   1/1     Running     1          11m
-kube-system                      calico-kube-controllers-8575b76f66-2972h                          1/1     Running     0          25m
-kube-system                      calico-node-c9t45                                                 1/1     Running     1          25m
-kube-system                      calico-node-gxppq                                                 1/1     Running     0          25m
-kube-system                      calico-node-pzbft                                                 1/1     Running     1          25m
-kube-system                      coredns-8474476ff8-9t7t7                                          1/1     Running     0          12m
-kube-system                      coredns-8474476ff8-wn6q5                                          1/1     Running     0          25m
-kube-system                      dns-autoscaler-7df78bfcfb-l5wlw                                   1/1     Running     0          25m
-kube-system                      kube-apiserver-mason-master-node                                  1/1     Running     0          26m
-kube-system                      kube-controller-manager-mason-master-node                         1/1     Running     1          26m
-kube-system                      kube-proxy-v4rmx                                                  1/1     Running     0          9m39s
-kube-system                      kube-proxy-vpkbd                                                  1/1     Running     0          9m39s
-kube-system                      kube-proxy-whl9c                                                  1/1     Running     0          9m39s
-kube-system                      kube-scheduler-mason-master-node                                  1/1     Running     1          26m
-kube-system                      kubernetes-dashboard-6c96f5b677-49dfc                             1/1     Running     1          25m
-kube-system                      kubernetes-metrics-scraper-694c6bdbc9-ltrpp                       1/1     Running     1          25m
-kube-system                      nginx-proxy-mason-compute-node1                                   1/1     Running     1          25m
-kube-system                      nginx-proxy-mason-compute-node2                                   1/1     Running     1          25m
-kube-system                      nodelocaldns-5w5sk                                                1/1     Running     1          25m
-kube-system                      nodelocaldns-bt8k9                                                1/1     Running     0          25m
-kube-system                      nodelocaldns-tzmtf                                                1/1     Running     1          25m
-kube-system                      nvidia-device-plugin-2gczf                                        1/1     Running     0          5m20s
-kube-system                      nvidia-device-plugin-gjpkb                                        1/1     Running     0          6m18s
-node-feature-discovery           gpu-feature-discovery-9c8nt                                       1/1     Running     9          23m
-node-feature-discovery           gpu-feature-discovery-g7h7f                                       1/1     Running     9          23m
-node-feature-discovery           nfd-master-6dd87d999-vdlwj                                        1/1     Running     0          23m
-node-feature-discovery           nfd-worker-fm5vd                                                  1/1     Running     0          8m50s
-node-feature-discovery           nfd-worker-nbpkz                                                  1/1     Running     0          23m
-node-feature-discovery           nfd-worker-p9tr9                                                  1/1     Running     0          23m
+deepops-nfs-client-provisioner   nfs-subdir-external-provisioner-7967cbb457-5p25v                  1/1     Running     0          3m6s
+gpu-operator-resources           gpu-feature-discovery-2j8jv                                       1/1     Running     0          3m27s
+gpu-operator-resources           gpu-feature-discovery-tglkn                                       1/1     Running     0          3m27s
+gpu-operator-resources           gpu-operator-6497cbf9cd-zkfcp                                     1/1     Running     0          3m48s
+gpu-operator-resources           nvidia-container-toolkit-daemonset-k6cfw                          1/1     Running     0          3m28s
+gpu-operator-resources           nvidia-container-toolkit-daemonset-zg67g                          1/1     Running     0          3m28s
+gpu-operator-resources           nvidia-cuda-validator-9th56                                       0/1     Completed   0          55s
+gpu-operator-resources           nvidia-cuda-validator-hm6ct                                       0/1     Completed   0          74s
+gpu-operator-resources           nvidia-dcgm-exporter-mxj7q                                        1/1     Running     0          3m27s
+gpu-operator-resources           nvidia-dcgm-exporter-ppq8t                                        1/1     Running     0          3m27s
+gpu-operator-resources           nvidia-device-plugin-daemonset-c6lbt                              1/1     Running     0          3m27s
+gpu-operator-resources           nvidia-device-plugin-daemonset-gshvb                              1/1     Running     0          3m27s
+gpu-operator-resources           nvidia-device-plugin-validator-67lzn                              0/1     Completed   0          23s
+gpu-operator-resources           nvidia-device-plugin-validator-lh6t7                              0/1     Completed   0          42s
+gpu-operator-resources           nvidia-driver-daemonset-dt94p                                     1/1     Running     0          3m28s
+gpu-operator-resources           nvidia-driver-daemonset-pjj4c                                     1/1     Running     0          3m28s
+gpu-operator-resources           nvidia-gpu-operator-node-feature-discovery-master-84566dffsk8dp   1/1     Running     0          3m48s
+gpu-operator-resources           nvidia-gpu-operator-node-feature-discovery-worker-lcxz5           1/1     Running     0          3m48s
+gpu-operator-resources           nvidia-gpu-operator-node-feature-discovery-worker-mw7jd           1/1     Running     0          3m48s
+gpu-operator-resources           nvidia-gpu-operator-node-feature-discovery-worker-q7nh8           1/1     Running     0          3m48s
+gpu-operator-resources           nvidia-mig-manager-hvp5m                                          1/1     Running     0          36s
+gpu-operator-resources           nvidia-mig-manager-w4xbb                                          1/1     Running     0          33s
+gpu-operator-resources           nvidia-operator-validator-6pq64                                   1/1     Running     0          3m27s
+gpu-operator-resources           nvidia-operator-validator-h7tpx                                   1/1     Running     0          3m27s
+kube-system                      calico-kube-controllers-5788f6558-rl9lj                           1/1     Running     0          5m53s
+kube-system                      calico-node-cs57m                                                 1/1     Running     0          6m3s
+kube-system                      calico-node-d87pf                                                 1/1     Running     0          6m3s
+kube-system                      calico-node-dbx57                                                 1/1     Running     0          6m3s
+kube-system                      coredns-8474476ff8-qqcvh                                          1/1     Running     0          5m46s
+kube-system                      coredns-8474476ff8-wsxrr                                          1/1     Running     0          5m44s
+kube-system                      dns-autoscaler-5ffdc7f89d-x9qs5                                   1/1     Running     0          5m45s
+kube-system                      kube-apiserver-mason-master-node                                  1/1     Running     1          7m10s
+kube-system                      kube-controller-manager-mason-master-node                         1/1     Running     1          7m9s
+kube-system                      kube-proxy-4hr7r                                                  1/1     Running     0          6m13s
+kube-system                      kube-proxy-d5frj                                                  1/1     Running     0          6m13s
+kube-system                      kube-proxy-fchfc                                                  1/1     Running     0          6m13s
+kube-system                      kube-scheduler-mason-master-node                                  1/1     Running     1          7m9s
+kube-system                      kubernetes-dashboard-6c96f5b677-fsqfp                             1/1     Running     0          5m44s
+kube-system                      kubernetes-metrics-scraper-54b676c794-hbvdz                       1/1     Running     0          5m44s
+kube-system                      nginx-proxy-mason-compute-node1                                   1/1     Running     0          6m13s
+kube-system                      nginx-proxy-mason-compute-node2                                   1/1     Running     0          6m14s
+kube-system                      nodelocaldns-jsczp                                                1/1     Running     0          5m45s
+kube-system                      nodelocaldns-pv25s                                                1/1     Running     0          5m45s
+kube-system                      nodelocaldns-pwrm4                                                1/1     Running     0          5m45s
+
 ```
 
 
@@ -206,17 +199,17 @@ Optionally, test a GPU job to ensure that your Kubernetes setup can tap into GPU
 ```
 $ kubectl run nvidia-smi --rm -t -i --restart=Never --image=nvidia/cuda:11.0-runtime-ubi7 --limits=nvidia.com/gpu=1 -- nvidia-smi
 Flag --limits has been deprecated, has no effect and will be removed in the future.
-Fri Apr  1 08:17:03 2022
+Fri May 13 14:16:09 2022
 +-----------------------------------------------------------------------------+
-| NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
+| NVIDIA-SMI 510.47.03    Driver Version: 510.47.03    CUDA Version: 11.6     |
 |-------------------------------+----------------------+----------------------+
 | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  NVIDIA RTX A6000    On   | 00000000:0B:00.0 Off |                    0 |
-| 30%   42C    P8    32W / 300W |      0MiB / 45634MiB |      0%      Default |
-|                               |                      |                  N/A |
+|   0  NVIDIA A100-PCI...  On   | 00000000:03:00.0 Off |                    0 |
+| N/A   30C    P0    34W / 250W |      0MiB / 40960MiB |      0%      Default |
+|                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
 
 +-----------------------------------------------------------------------------+
@@ -227,6 +220,7 @@ Fri Apr  1 08:17:03 2022
 |  No running processes found                                                 |
 +-----------------------------------------------------------------------------+
 pod "nvidia-smi" deleted
+
 ```
 
 # Kubernetes Configuration 
@@ -242,7 +236,7 @@ Validating PVC has successfully been created
 ```
 $ kubectl get pvc -A
 NAMESPACE   NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-default     triton-claim   Bound    pvc-eb358acc-874b-4f41-81c4-4974b2714220   10Gi       RWX            nfs-client     5s
+default     triton-claim   Bound    pvc-e065e42e-63db-4bfb-bcdf-36af53ca7e7c   64Gi       RWX            nfs-client     4m23s
 ```
 Validating volume created on NFS server
 ```
@@ -255,7 +249,7 @@ RemovePVC (Optional, for debugging)
 $ kubectl delete pvc <PVC_NAME> -n <NAMESPACE>
 ```
 ## Create Kubernetes Secrets
-Create a Kubernetes Secrets so that kubernetes will be able to pull docker images from [NVIDIA GPU Cloud](https://ngc.nvidia.com/setup/api-key)
+Create a Kubernetes Secrets so that kubernetes will be able to pull docker images from [NVIDIA GPU Cloud](https://ngc.nvidia.com/setup/api-key), you need to register NGC first, and the best thing is: it's free :)
 
 ```
 $ kubectl create secret docker-registry ngc \
@@ -267,11 +261,9 @@ $ kubectl create secret docker-registry ngc \
 Validating kubernetes secret for NGC access  has successfully been created
 ```
 $ kubectl get secrets
-NAME                                          TYPE                                  DATA   AGE
-default-token-rmdlj                           kubernetes.io/service-account-token   3      117m
-ngc                                           kubernetes.io/dockerconfigjson        1      7s
-sh.helm.release.v1.gpu-feature-discovery.v1   helm.sh/release.v1                    1      113m
-sh.helm.release.v1.nvidia-device-plugin.v1    helm.sh/release.v1                    1      113m
+NAME                  TYPE                                  DATA   AGE
+default-token-v8m8g   kubernetes.io/service-account-token   3      16m
+ngc                   kubernetes.io/dockerconfigjson        1      6s
 
 ```
 Remove Kubernetes Secret (Optional, for debugging)
@@ -332,10 +324,8 @@ $ helm delete nvidia
 Make sure the pod is running, it may take a few mins to download the image
 ```
 $ kubectl get pod -o wide
-NAME                                            READY   STATUS    RESTARTS   AGE   IP             NODE          NOMINATED NODE   READINESS GATES
-ingress-nginx-controller-6b4fdfdcf7-2t4p6       1/1     Running   0          44m   10.19.104.20   master-node   <none>           <none>
-nvidia-tritoninferenceserver-686bc4c4bc-vjrvl   1/1     Running   0          92m   10.233.91.18   gpu-node1     <none>           <none>
-
+NAME                                            READY   STATUS    RESTARTS   AGE   IP              NODE                  NOMINATED NODE   READINESS GATES
+nvidia-tritoninferenceserver-849c88bdbc-tsth5   0/1     Running   0          7s    10.233.100.17   mason-compute-node2   <none>           <none>
 ```
 
 Check pod status
@@ -348,8 +338,8 @@ If the load balancer is set correctly, the Triton deployment should get an exter
 ```
 $ kubectl get service
 NAME                           TYPE           CLUSTER-IP      EXTERNAL-IP    PORT(S)                                        AGE
-kubernetes                     ClusterIP      10.233.0.1      <none>         443/TCP                                        3h10m
-nvidia-tritoninferenceserver   LoadBalancer   10.233.42.105   10.19.104.10   8000:32197/TCP,8001:31639/TCP,8002:32131/TCP   62s
+kubernetes                     ClusterIP      10.233.0.1      <none>         443/TCP                                        61m
+nvidia-tritoninferenceserver   LoadBalancer   10.233.59.250   10.19.104.21   8000:31426/TCP,8001:31134/TCP,8002:31886/TCP   91s
 ```
 
 
@@ -367,19 +357,10 @@ $ curl <TRITON_EXTERNAL_IP>:8002/metrics
 ## Run Triton Client Examples
 Download Triton Inference Client Examples from NGC. In this lab, we **run this in compute node** in order to get stable throughput and reduce network bandwidth and latency impact
 
-To stabilize GPU compute performance, lock GPU clock rate at Default Applications Clocks by following command:
-```
-#To get Applications Clocks by nvidia-smi -q
-$ sudo nvidia-smi -lgc 1327,1327 # For NVIDIA Tesla V100
-$ sudo nvidia-smi -lgc 1395,1395 # For NVIDIA Quadro RTX 8000
-```
-**NOTE: Lock GPU Clock rate is NOT require for production environment**
-<br>
-<br>
-<br>
 Launch Triton Client Example container
 ```
-$ sudo docker run -it --rm --net=host nvcr.io/nvidia/tritonserver:22.03-py3-sdk
+$ sudo ctr images pull nvcr.io/nvidia/tritonserver:22.03-py3-sdk
+$ sudo ctr run -t --rm --net-host nvcr.io/nvidia/tritonserver:22.03-py3-sdk triton-client
 ```
 
 Send inference request to Triton Inference Server
@@ -402,7 +383,12 @@ $ ./stress_light.sh
 ```
 
 ## Deploy monitor service 
-Keep the stress test running. Let's **go back to provision node**, deploy Prometheus and Grafana to monitor Kubernetes and cluster nodes
+Keep the stress test running. Let's **go back to provision node**, deploy Prometheus and Grafana to monitor Kubernetes and cluster nodes. I've made some Prometheus and Grafana yaml patch fix for this lab, please copy two files to DeepOps folder for installation.
+```
+$ cp ~/Triton-Inference-Server-on-Kubernetes/yaml/monitoring.yaml ~/deepops/config/helm/monitoring.yml 
+$ cp ~/Triton-Inference-Server-on-Kubernetes/dashboard/gpu-dashboard.json ~/deepops/src/dashboards/gpu-dashboard.json
+```
+Deploy Prometheus and Grafana
 ```
 $ cd ~/deepops/scripts/k8s
 $ ./deploy_monitoring.sh
@@ -411,25 +397,27 @@ $ ./deploy_monitoring.sh
 Check monitoring service status
 ```
 $ kubectl get pod -n monitoring
-NAME                                                        READY   STATUS    RESTARTS   AGE
-alertmanager-kube-prometheus-stack-alertmanager-0           2/2     Running   0          2m44s
-dcgm-exporter-jmjqv                                         1/1     Running   0          2m49s
-kube-prometheus-stack-grafana-7f97fc5446-zpltf              2/2     Running   0          2m55s
-kube-prometheus-stack-kube-state-metrics-66789f8885-8c6tw   1/1     Running   0          2m55s
-kube-prometheus-stack-operator-647c466c47-6jdn8             2/2     Running   0          2m55s
-kube-prometheus-stack-prometheus-node-exporter-clxz8        1/1     Running   0          2m55s
-kube-prometheus-stack-prometheus-node-exporter-tlvfg        1/1     Running   0          2m55s
-prometheus-kube-prometheus-stack-prometheus-0               3/3     Running   1          2m44s
+NAME                                                       READY   STATUS    RESTARTS   AGE
+alertmanager-kube-prometheus-stack-alertmanager-0          2/2     Running   0          108s
+kube-prometheus-stack-grafana-8699669c75-xqkpn             3/3     Running   0          118s
+kube-prometheus-stack-kube-state-metrics-d699cc95f-vq8pj   1/1     Running   0          118s
+kube-prometheus-stack-operator-5b58cb5c7-sqpq6             1/1     Running   0          118s
+kube-prometheus-stack-prometheus-node-exporter-22qzd       1/1     Running   0          118s
+kube-prometheus-stack-prometheus-node-exporter-8tpl6       1/1     Running   0          118s
+kube-prometheus-stack-prometheus-node-exporter-h6g54       1/1     Running   0          118s
+prometheus-kube-prometheus-stack-prometheus-0              2/2     Running   0          108s
 ```
 
 The services can be reached from the following addresses:
 
 Grafana: http://\<kube-master>:30200<br>
+Grafana user: admin<br>
+Grafana password: deepops<br><br>
 Prometheus: http://\<kube-master>:30500<br>
 Alertmanager: http://\<kube-master>:30400<br>
 
 
-You should be able to observe metrics such as GPU Utilization, memory usage in GPU nodes dashboard. However, there are no Triton-related metrics to monitoring. Therefore, let’s add Triton-related metrics into Prometheus server in the following sections
+In the left panel, select Dashboard icon, click Browse then select "GPU Node - fixed". You should be able to observe metrics such as GPU Utilization, memory usage in GPU nodes dashboard. However, there are no Triton-related metrics to monitoring. Therefore, let’s add Triton-related metrics into Prometheus server in the following sections
 
 ![](https://i.imgur.com/k8yq59E.png)
 
@@ -438,13 +426,17 @@ You should be able to observe metrics such as GPU Utilization, memory usage in G
 # Monitor Triton Inference Server
 ## Add Triton Metrics into Prometheus server
 
-Delete the current monitoring service because we will modify it
+Delete the current monitoring service because we will modify  yaml file.
 ```
 $ ./deploy_monitoring.sh -d
 ```
 
-Triton Inference Server Metrics has benn added into monitoring.yaml, see full content in monitoring.yaml
+Actually Triton Inference Server Metrics setting has been added into monitoring.yaml, see full content in L61 to L76 in monitoring.yaml and uncomment those.
+
 ```
+Uncomment L61 to L76
+$ vi ~/Triton-Inference-Server-on-Kubernetes/yaml/monitoring.yaml
+
 $ cp ~/Triton-Inference-Server-on-Kubernetes/yaml/monitoring.yaml ~/deepops/config/helm/monitoring.yml 
 ```
 
@@ -464,30 +456,30 @@ Go to Prometheus server and simply search “nv_inference”, you should be able
 
 ## Create monitor dashboard for Triton Inference Server
 Go to Grafana, create a dashboard and add new panels by following:
-1. Success request per sec
+1. Success request per minute
    1. Metrics: sum(delta(nv_inference_request_success[1m]))
    2. Legend : {{model}}
-   3. Panel title: Success request per sec
+   3. Panel title: Success request per minute
    4. Apply
 2. Avg queue time per request
    1. Metrics: avg(delta(nv_inference_queue_duration_us[1m])/(1+delta(nv_inference_request_success[1m]))/1000)
    2. Legend : Triton Inference Server
    3. Panel title: Avg queue time per request(ms)
-   4. Edit Panel > Axes > Left Y > Decimals to 4 
+   4. Edit Panel > Standard options Decimals > 4 
    5. Apply
 3. GPU Utilization
-   1. Metrics: max by (gpu) (DCGM_FI_DEV_GPU_UTIL)
+   1. Metrics: max by (gpu) (DCGM_FI_PROF_GR_ENGINE_ACTIVE)
    2. Legend : GPU-{{gpu}}
    3. Panel title: GPU Utilization
-   4. Visualization : Gauge
+   4. Visualization : Time series > Gauge
    5. Apply
 4. Replica number
-   1. Metrics: kube_deployment_status_replicas{deployment="nvidia-tritoninferenceserver"}
+   1. Metrics: kube_deployment_status_replicas{deployment="nvidia-tritoninferenceserver",job="gpu-metrics"}
    2. Legend : {{deployment}}
    3. Panel title: Replica number
-   4. Edit Panel > Axes > Left Y > Decimals to 0
+   4. Edit Panel > Standard options Decimals > 0 
 5. Modified dashboard, make it easier to read, and change “time ranges” to “Last 5 minutes” and "refresh time" to "5s" at upper right side of Grafana dashboard.
-6. Save the dashboard.
+6. Save the dashboard and naeme "Triton Inference Server Dashboard".
 ![](https://i.imgur.com/whJZj4x.png)
 
 
@@ -498,7 +490,11 @@ Observe “GPU Utilization”, “Avg queue time per request” and “Success r
 Then, stop “stress_light.sh” in the client container, then run “stress_heavy.sh”. 
 Observe “GPU Utilization”, “Avg queue time per request” and “Success requests per sec”
 
-For V100@1327Mhz,
+For V100,
+“Success requests per sec” should be arounds **120**. 
+“Avg queue time per request” should be under **0.05ms** when running “stress_light.sh”
+
+For A100,
 “Success requests per sec” should be arounds **120**. 
 “Avg queue time per request” should be under **0.05ms** when running “stress_light.sh”
 
@@ -506,18 +502,19 @@ For V100@1327Mhz,
 
 Now, stop “stress_heavy.sh” and continue to config HPA
 
-# Horizontal Pod Autoscaling(HPA)
-## Create a custom metric for HPA
+# Autoscales Triton Inference Server
+## Create a custom metric for Horizontal Pod Autoscaling(HPA)
 Default metrics in Kubernetes doesn’t suitable for Triton Inferences Server scale out. Therefore, we will need to create a custom metric to trigger Triton Inferences Serve scale out. Prometheus Adapter is suitable for use with the autoscaling/v2 Horizontal Pod Autoscaler in Kubernetes 1.6+. It can also replace the metrics server on clusters that already run Prometheus and collect the appropriate metrics
 
-Modify the **url** and **port** to match current Prometheus server, so that custom metrics can be collected to Prometheus server
+
 ```
 $ cd ~/Triton-Inference-Server-on-Kubernetes/
 $ vi yaml/prometheus-adapter.values
 ```
+1. Modify the **url** and **port** to match current Prometheus server in L34~L35, so that custom metrics can be collected to Prometheus server
 
-Add new custom metric for HPA, 
-the metric already filled in prometheus-adapter.values:
+2. Add new custom metric for HPA, 
+the metric already filled in prometheus-adapter.values, please uncomment L52 to L62
 ```
 ...
 ...
@@ -552,6 +549,14 @@ $ helm install prometheus-community/prometheus-adapter \
 Check available custom metrics, it will take a few mins to collect metrics. You may need to install jq by “sudo apt install jq”
 ```
 $ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1 | jq .
+
+{
+  "kind": "APIResourceList",
+  "apiVersion": "v1",
+  "groupVersion": "custom.metrics.k8s.io/v1beta1",
+  "resources": []
+}
+
 ```
 
 Verify Triton metric could be collected by Kubernetes custom.metrics API
@@ -568,16 +573,17 @@ $ kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods
       "describedObject": {
         "kind": "Pod",
         "namespace": "default",
-        "name": "nvidia-tritoninferenceserver-686bc4c4bc-vjrvl",
+        "name": "nvidia-tritoninferenceserver-849c88bdbc-tsth5",
         "apiVersion": "/v1"
       },
       "metricName": "nv_inference_request_success",
-      "timestamp": "2021-03-23T09:51:57Z",
-      "value": "4543",
+      "timestamp": "2022-05-14T12:58:26Z",
+      "value": "33756",
       "selector": null
     }
   ]
 }
+
 ```
 
 Verify the custom metric we created for HPA is set correctly
@@ -594,16 +600,17 @@ $ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods/
       "describedObject": {
         "kind": "Pod",
         "namespace": "default",
-        "name": "nvidia-tritoninferenceserver-686bc4c4bc-vjrvl",
+        "name": "nvidia-tritoninferenceserver-849c88bdbc-tsth5",
         "apiVersion": "/v1"
       },
       "metricName": "avg_time_queue_ms",
-      "timestamp": "2021-03-23T09:52:31Z",
-      "value": "0",
+      "timestamp": "2022-05-14T12:58:45Z",
+      "value": "1768m",
       "selector": null
     }
   ]
 }
+
 ```
 
 
@@ -616,13 +623,13 @@ $ helm delete <PROMETHEUS_ADAPTER_NAME> -n monitoring
 ## Create HPA for Triton Inference Server
 Create a HPA, set a value for custom metric to trigger HPA. In this lab, we will use "avg_time_queue_ms" metric to trigger HPA, the metric stand for the waiting time each inference request and we don't want a long waiting time. Fortunately, we already knew our "avg_time_queue_ms" under different stress level
 
-For single V100@1327Mhz:
+For single V100:
 
 "avg_time_queue_ms" is **0.05ms** when running “stress_light.sh”
 
 "avg_time_queue_ms" is **3.5ms** when running “stress_heavy.sh”
 
-Therefor, you can set value between 3.5ms and 0.05ms. Let’s put 1.5ms (1500m) here. See hpa.yaml for full content
+Therefore, you can set value between 3.5ms and 0.05ms. Let’s put 1.5ms (1500m) here. See hpa.yaml for full content
 ```
 $ vi yaml/hpa.yaml
 $ kubectl apply -f yaml/hpa.yaml
@@ -631,8 +638,8 @@ $ kubectl apply -f yaml/hpa.yaml
 Validating HPA has successfully been created
 ```
 $ kubectl get hpa
-NAMESPACE   NAME                    REFERENCE                                 TARGETS    MINPODS   MAXPODS   REPLICAS   AGE
-default     triton-metirc-app-hpa   Deployment/nvidia-tritoninferenceserver   <unknown>/1500m   1         2         1          17s
+NAME                    REFERENCE                                 TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+triton-metirc-app-hpa   Deployment/nvidia-tritoninferenceserver   0/1500m   1         2         2          57s
 ```
 
 Let's wait for a few seconds for custom metric ready
@@ -665,7 +672,6 @@ NAME                    REFERENCE                                 TARGETS    MIN
 triton-metirc-app-hpa   Deployment/nvidia-tritoninferenceserver   4m/1500m   1         2         2          9m5s
 ```
 ![](https://i.imgur.com/dHAm07n.png)
-
 
 
 
