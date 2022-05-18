@@ -540,9 +540,8 @@ Learn more about custom metric, please visit [Metrics Discovery and Presentation
 
 Deploy prometheus-adapter
 ```
-$ helm install prometheus-community/prometheus-adapter \
+$ helm install prometheus-adapter prometheus-community/prometheus-adapter \
    --namespace monitoring \
-   --generate-name \
    --values yaml/prometheus-adapter.values
 ```
 
@@ -616,8 +615,7 @@ $ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods/
 
 Remove Prometheus Adapter (Optional, for debugging)
 ```
-$ helm list -A #Check helm name
-$ helm delete <PROMETHEUS_ADAPTER_NAME> -n monitoring
+$ helm delete prometheus-adapter -n monitoring
 ```
 
 ## Create HPA for Triton Inference Server
