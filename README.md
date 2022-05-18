@@ -1,3 +1,9 @@
+TODO
+1. Update Grafana Dashboard - It's complete not work
+2. Update instruction of delete monitoring stack, it will stuck if delete monitoring stack before delete prometheus-adapter
+3. Update GPU Operator with MIG config
+4. Update MIG Device monitoring
+
 # Preparation
 
 You will need to prepare at least 3 nodes, one master node, one compute node with 2 GPUs or above and one provision node. In this lab, I'm using DGX Station as a compute node
