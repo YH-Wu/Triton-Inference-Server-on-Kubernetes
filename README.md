@@ -1,5 +1,5 @@
 TODO
-1. Update Grafana Dashboard - It's complete not work
+1. Update custom Grafana Dashboard - It's complete not work
 2. Update instruction of delete monitoring stack, it will stuck if delete monitoring stack before delete prometheus-adapter
 3. Update GPU Operator with MIG config
 4. Update MIG Device monitoring
