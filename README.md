@@ -386,6 +386,8 @@ $ ./stress_light.sh
 Keep the stress test running. Let's **go back to provision node**, deploy Prometheus and Grafana to monitor Kubernetes and cluster nodes. I've made some Prometheus and Grafana yaml patch fix for this lab, please copy two files to DeepOps folder for installation.
 ```
 $ cp ~/Triton-Inference-Server-on-Kubernetes/yaml/monitoring.yaml ~/deepops/config/helm/monitoring.yml 
+
+#My dashboard is not work, plaese dont do following command until I fix this. 2022/05/18 Mason
 $ cp ~/Triton-Inference-Server-on-Kubernetes/dashboard/gpu-dashboard.json ~/deepops/src/dashboards/gpu-dashboard.json
 ```
 Deploy Prometheus and Grafana
