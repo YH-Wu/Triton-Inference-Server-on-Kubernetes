@@ -246,7 +246,7 @@ default     triton-claim   Bound    pvc-e065e42e-63db-4bfb-bcdf-36af53ca7e7c   6
 ```
 Validating volume created on NFS server
 ```
-$ mason@nfs-server:/nfsshare/k8s_nfs$ ls
+$ mason@nfs-server:/nfsshare/nfsshare/data/Triton_tmp$ ls
 default-triton-claim-pvc-eb358acc-874b-4f41-81c4-4974b2714220
 ```
 
