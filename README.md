@@ -290,8 +290,12 @@ Set available IPs for load balance:
 $ vi yaml/metallb.yaml #at least provide 2 IPs
 $ cp yaml/metallb.yaml ~/deepops/config/helm/metallb.yml
 $ cd ~/deepops/scripts/k8s/
+```
+Modifiy metallb Helm Chart version to 3.0.10 in L26 in deploy_loadbalancer.sh, then install the loadbalancer
+```
 $ ./deploy_loadbalancer.sh
 ```
+
 Remove metallb load balancer (Optional, for debugging)
 ```
 $ helm delete metallb -n deepops-loadbalancer
